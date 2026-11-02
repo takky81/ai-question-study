@@ -6,7 +6,7 @@
 
 ## Current State
 
-greenfield で、cc-sdd の設定だけがある。参照実装として `../blank-study` がある。
+greenfield で、cc-sdd の設定と steering だけがある。
 
 ## Desired Outcome
 
@@ -14,11 +14,11 @@ greenfield で、cc-sdd の設定だけがある。参照実装として `../bla
 
 ## Approach
 
-blank-study の構成（Vite + React Router + Tailwind 4 + Supabase JS、GitHub Pages、ローカル Supabase、Vitest/Playwright）を踏襲して雛形を作る。steering（product/tech/structure）も整備する。
+steering（tech.md、structure.md）に定めた構成（Vite + React Router + Tailwind 4 + Supabase JS、GitHub Pages、ローカル Supabase、Vitest/Playwright）で雛形を作る。
 
 ## Scope
 
-- **In**: package/tsconfig/vite の設定、Router と base/basename の同期、Supabase client、認証（ログイン／ログアウト／保護ルート）、共通レイアウト・ナビゲーション（学習導線はモバイル優先、管理導線は PC 優先）、テーマ・CSS トークン（正誤色を含む）、共通ページングユーティリティ、テスト・CI・デプロイ設定。
+- **In**: package/tsconfig/vite の設定、Router と base/basename の同期、Supabase client、認証（ログイン／ログアウト／保護ルート。新規登録は Supabase 側で無効にし、自分専用アカウントだけが使える）、共通レイアウト・ナビゲーション（学習導線はモバイル優先、管理導線は PC 優先）、テーマ・CSS トークン（正誤色を含む）、共通ページングユーティリティ、テスト・CI・デプロイ設定。
 - **Out**: 業務テーブル（科目・問題など）、各業務画面。
 
 ## Boundary Candidates
@@ -33,7 +33,7 @@ blank-study の構成（Vite + React Router + Tailwind 4 + Supabase JS、GitHub 
 
 ## Upstream / Downstream
 
-- **Upstream**: blank-study の規約、Supabase Cloud、GitHub Pages
+- **Upstream**: steering の規約、Supabase Cloud、GitHub Pages
 - **Downstream**: 全 spec
 
 ## Existing Spec Touchpoints
@@ -43,4 +43,4 @@ blank-study の構成（Vite + React Router + Tailwind 4 + Supabase JS、GitHub 
 
 ## Constraints
 
-blank-study の tech.md に準拠する。秘密情報を `VITE_` 変数に置かない。
+tech.md に準拠する。秘密情報を `VITE_` 変数に置かない。

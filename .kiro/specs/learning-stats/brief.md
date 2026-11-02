@@ -14,30 +14,30 @@ quiz-session が解答履歴を記録する。
 
 ## Approach
 
-集計は DB 側（ビューまたは RPC）で行い、クライアントはビンに分けた結果をヒストグラムとして描画する。
+問題ごと・キーワードごとの集計値は quiz-session の集計ビューを参照する。本 spec はそれをビンに分ける処理（DB 側）とヒストグラムの描画を担う。
 
 ## Scope
 
 - **In**:
   - 設問ごとの正答率・出題回数のヒストグラム
-  - キーワードごとの正答率・出題回数のヒストグラム（集計範囲を、そのキーワードに直接紐づく問題だけにするか、部分木を含めるかは設計で定義する）
+  - キーワードごとの正答率・出題回数のヒストグラム（そのキーワードと配下の階層に紐づく問題すべてを集計する）
   - 科目・キーワード範囲による絞り込み
   - ビンから該当する設問・キーワードの一覧への掘り下げ（要否は設計で判断する）
 - **Out**: 解答・出題のロジック、データの出力。
 
 ## Boundary Candidates
 
-- 集計 RPC
+- ビン分けの RPC
 - ヒストグラム UI
 
 ## Out of Boundary
 
-- SRS 状態の更新（quiz-session）
+- SRS 状態の更新、問題・キーワードごとの集計値の計算（quiz-session）
 
 ## Upstream / Downstream
 
-- **Upstream**: quiz-session の解答履歴、subject-catalog の階層
-- **Downstream**: question-exchange が同じ統計を出力条件に使う可能性がある
+- **Upstream**: quiz-session の集計ビュー、subject-catalog の階層
+- **Downstream**: なし
 
 ## Existing Spec Touchpoints
 
@@ -46,4 +46,4 @@ quiz-session が解答履歴を記録する。
 
 ## Constraints
 
-モバイル優先。全件を欠落なく集計する（1,000 行上限は DB 側の集計で回避する）。「わからない」は誤答として集計する。
+UI は `tech.md` の規約（モバイル優先）に従う。全件を欠落なく扱う（1,000 行上限は DB 側の集計で回避する）。「わからない」「？」の数え方は quiz-session の集計ビューの定義に従う。
