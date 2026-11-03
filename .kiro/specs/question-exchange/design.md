@@ -544,7 +544,7 @@ export function validateImport(file: ImportFileV1, snapshot: ImportSnapshot): Im
 
 - 参照（4.4、4.5、4.12）: 科目が存在しない・削除済み、`id` が科目のキーワードにない、問題が不存在・他科目・削除済み、選択肢 ID がその問題の現在の有効な選択肢にない。
 - 構造（4.6〜4.9）: `add`→`rename`→`move` を適用した仮想の木を作り、各移動について移動先が `keywordSubtreeIds(仮想の木, id)` に含まれれば `keyword_cycle`。仮想の木で同じ親の下の名前（前後空白除去）が重複すれば `duplicate_sibling`。一時キーの重複・未定義（キーワードと問題で名前空間を分ける）。同じキーワードの改名・移動はそれぞれ1回まで、同じ問題は `update` と `disable` を合わせて1回まで。
-- 作問ルール（4.10）: 修正・新規の各問題を `QuestionInput`（`keywordIds` は既存 ID または `tmp:<tempKey>`、`subjectId` は取込先）に変換し、`validateQuestion(input, { subjectKeywordIds: 既存 ID ∪ tmp:* })` を呼ぶ。返された `ValidationIssue` を、`target` から `path` に変換して `ImportIssue` にする（重大度はそのまま）。
+- 作問ルール（4.10）: 修正・新規の各問題を `QuestionInput`（`keywordIds` は既存 ID または `tmp:<tempKey>`、`subjectId` は取込先）に変換し、`validateQuestion(input, { subjectKeywordIds: 既存 ID ∪ tmp:* })` を呼ぶ。返された `ValidationIssue` を、`target` から `path` に変換して `ImportIssue` にする（重大度とメッセージはそのまま）。`target` が `{ field: 'choices' }` の指摘（`too_few_choices`、`duplicate_choice_id` など）は `questions[i].choices` に変換する。
 - `status = 'disabled'` の問題の修正は `edit_disabled` の警告（4.13）。
 - 結果は path の文書順。副作用なし。
 

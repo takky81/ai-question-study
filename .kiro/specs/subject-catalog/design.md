@@ -241,7 +241,7 @@ stateDiagram-v2
 | 5.1 | 共有の検証規則 | validate.ts | `validateQuestion`、`ValidationIssue` | 問題の保存 |
 | 5.2 | 正解1つ | validate.ts | `correct_count` | — |
 | 5.3 | 空欄 | validate.ts | `required` | — |
-| 5.4 | 2個未満・重複 | validate.ts | `too_few_choices`、`duplicate_choice` | — |
+| 5.4 | 2個未満・重複 | validate.ts | `too_few_choices`、`duplicate_choice`、`duplicate_choice_id` | — |
 | 5.5 | 紐づけなし・他科目 | validate.ts | `no_keyword`、`foreign_keyword` | — |
 | 5.6 | 原則の選択肢数 | validate.ts | `choice_count_below`、`choice_count_above` | — |
 | 5.7 | 略語の解説 | validate.ts | `abbreviation_unexplained` | — |
@@ -399,7 +399,7 @@ export type QuestionListItem = {
 export const EXPECTED_CHOICE_COUNT: Record<QuestionKind, number> = { keyword: 6, feature: 4 };
 
 export type ValidationCode =
-  | 'correct_count' | 'required' | 'too_few_choices' | 'duplicate_choice'
+  | 'correct_count' | 'required' | 'too_few_choices' | 'duplicate_choice' | 'duplicate_choice_id'
   | 'no_keyword' | 'foreign_keyword' | 'choice_count_below' | 'choice_count_above'
   | 'abbreviation_unexplained';
 
@@ -426,6 +426,7 @@ export function validateQuestion(
 | 問題文・解説・選択肢本文・選択肢解説が空白のみ | `required` | error | 5.3 |
 | 選択肢が2個未満 | `too_few_choices` | error | 5.4 |
 | 前後空白を除いて同じ本文の選択肢がある | `duplicate_choice` | error | 5.4 |
+| 同じ（null でない）選択肢 ID が複数ある（保存 RPC と同じ条件） | `duplicate_choice_id` | error | 5.4 |
 | 紐づけが0件 | `no_keyword` | error | 5.5 |
 | `subjectKeywordIds` にない紐づけ | `foreign_keyword` | error | 5.5 |
 | 選択肢数が原則未満（2以上） | `choice_count_below` | warning | 5.6 |
