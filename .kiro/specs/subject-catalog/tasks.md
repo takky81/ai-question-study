@@ -62,7 +62,7 @@
 
 - [ ] 3. コア: API 境界
 
-- [ ] 3.1 科目とキーワードの API を実装する
+- [x] 3.1 科目とキーワードの API を実装する
   - 科目の一覧・作成・改名・配下件数・削除、キーワードの全件取得（共通ページング、安定順序）・作成・改名・移動・並べ替え・削除影響の事前集計・削除を作る
   - DB 行をアプリ型へ変換し、unique 違反、循環移動などを日本語のメッセージに変換するエラー変換関数を作る
   - ユニットテスト: 行変換とエラー変換の各分岐
@@ -182,3 +182,4 @@
 - 1.1: choices の RLS WITH CHECK は親の問題が自分のものであることも要求する（他人の question_id への挿入を防ぐ）。question_keywords の他人の行への紐づけは invoker 権限の `check_link_subject` が RLS 越しに防ぐため、この関数を security definer にしてはならない。「正解はちょうど1つ」は choices への書き込み時の遅延トリガーで検査するので、問題と選択肢は 1.2 の `save_question` で同一トランザクションに保存する
 - 1.2: questions / keywords の RLS WITH CHECK は参照先の科目が自分のものであることも要求する（外部キー検査は RLS を通らないため、1.2 の migration でポリシーを作り直した）。`save_question` は空の keywordIds を `no_keyword`、重複した選択肢 ID を `duplicate_choice_id` で拒否する。DB 挙動の確認用 SQL（rpc / cross など）は作業用の一時領域にあり、恒久的な検証は 6.1 の E2E で行う
 - 1.3: RLS 検証用の2人目のローカルアカウントは other@example.com / other-password-local（UUID 22222222-2222-4222-8222-222222222222、データなし）
+- 3.1: 実 DB で確認した形: `preview_keyword_deletion` / `delete_keyword` は単一オブジェクト（snake_case）を返す。RPC のエラーは `code: P0001`、`message` がエラーコードそのもの。一意制約は 23505、check 制約は 23514。`toCatalogErrorMessage` は 23514 を「名前を入力してください」にするため、3.2 で問題本文・選択肢など他の check 制約に使うときは制約名で文言を分ける。3.2 では question_not_found / choice_not_in_question / question_deleted の文言を追加する
