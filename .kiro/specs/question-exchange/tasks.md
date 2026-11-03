@@ -34,7 +34,7 @@
 
 - [ ] 2. コア: 出力と取込の純粋ロジック
 
-- [ ] 2.1 (P) 出力条件の検証と変換を作る
+- [x] 2.1 (P) 出力条件の検証と変換を作る
   - 条件の既定値（フラグ条件なし、無効の問題を含めない）を作り、正答率の下限・上限の逆転、範囲外、負の出題数、種類未指定の種類条件をエラーとして返す
   - 画面の百分率を内部の 0〜1 に変換し、出力 RPC に渡す条件に変換する
   - ユニットテストで、逆転・範囲外・種類未指定がエラーになり、変換結果が期待どおりになる
@@ -179,3 +179,4 @@
 - 1.2: questionUpdates は { input }（input.id 必須）。keywordMoves は配列順に1件ずつ move_keyword するので、2.4 は各段階で循環しない順に並べる。keyword_not_found / question_not_found は 2.5 の toExchangeErrorMessage で汎用メッセージに落ちる。正解1つの検査はコミット時に P0001 one_correct_required。
 - 1.3: 検証ライブラリは使わず parse.ts の小さなスキーマ走査で検査する。キーの有無は Object.hasOwn で判定（constructor 等の継承名も未知の項目として報告）。IMPORT_FIELD_NAMES / EXPORT_FIELD_NAMES は 4.1 で追加する。
 - 1.4: seed は「E2E 交換テスト」c0000000-0000-4000-8000-000000000001（d001〜d008、解答・フラグ付き）と「E2E 交換大量データ」…0002（1,200 問）。6.x の取込 E2E は seed を書き換えないよう、実行ごとに接頭辞付きの自前データを作ること（出力・集計の E2E は seed を読むだけなら可）。
+- 2.1: keywordId は p_filter に含めない。2.6 の API は c.keywordId を RPC の p_keyword_id に別で渡すこと。toSnapshot は flag≠types でも flagTypes を残す（軽微）。
