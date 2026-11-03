@@ -59,7 +59,7 @@
   - _Depends: 1.3_
   - _Requirements: 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10, 4.12, 4.13_
 
-- [ ] 2.4 差分の計算と修正の判定を作る
+- [x] 2.4 差分の計算と修正の判定を作る
   - 問題文・解説・種別・紐づけの集合・選択肢の列（ID、本文、解説、正解、順序）のいずれかが前後空白を除いて変わった場合だけを修正とする判定を作る
   - キーワードの追加・改名・移動（変更前後の階層パス）、修正（変わった項目と選択肢の追加・削除・変更・並べ替え）、新規（階層パス付き）、無効化（すでに無効なら対象外）、変更なしの問題、件数、修正ごとの解消予定のフラグを計算する
   - もとにした出力日時より後に更新された対象に「出力後に更新されています」の警告を付ける
@@ -182,3 +182,4 @@
 - 2.1: keywordId は p_filter に含めない。2.6 の API は c.keywordId を RPC の p_keyword_id に別で渡すこと。toSnapshot は flag≠types でも flagTypes を残す（軽微）。
 - 2.2: ExportRows と行型（camelCase）は exportBuild.ts に置く。2.6 の api.ts は snake_case の RPC 行をこの型に変換する。ファイル名の日時はローカル時刻、exportedAt は UTC の ISO。
 - 2.3: validateImport は移動後の最終状態だけで循環を判定する。2.4/2.5 は keywordMoves を移動後の深さが浅い順に並べ、途中で循環が生じないようにし、親の入れ替え（A/B）のテストを付けること。一時キーの仮 ID は tempKeywordId（tmp:<tempKey>）を使う。
+- 2.4: ImportSnapshot.keywords は updatedAt を持つ型に広げる（design.md 修正済み）。2.5 で importValidate.ts の型を (Keyword & { updatedAt: string })[] にし diff.ts のキャストを外す、buildApplyPayload は expected.keywords に updatedAt を必須で入れる。2.6 の loadImportSnapshot は keywords の updated_at を取得する。
