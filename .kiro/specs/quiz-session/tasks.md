@@ -119,7 +119,7 @@
   - _Depends: 2.2, 2.5, 3.4_
   - _Requirements: 1.1, 1.5, 1.6, 1.7, 1.9, 10.5_
 
-- [ ] 4.2 解答画面を作る
+- [x] 4.2 解答画面を作る
   - URL の範囲から候補を取得し、セッション進行の状態遷移で、出題、解答（冪等キーの生成）、記録、記録失敗の表示と再試行、次へ、出題対象外のスキップ、終了表示を進める
   - 成績表示、問題文、選択肢一覧、判定後の解説、フラグ入力（記録成功後に未解消フラグを取得）、次へを1列に配置し、モバイルと PC で同じ操作にする
   - 終了ボタンで同じ範囲を付けて範囲選択に戻る。範囲が不正なら範囲選択へ置換遷移する
@@ -169,3 +169,4 @@
 - 3.3: FlagForm は初期値をマウント時だけ読む。4.2 では listOpenFlags の完了後に <FlagForm key={questionId} …/> で描画すること。
 - 3.4: KeywordRangePicker は制御型 {keywords, selectedKeywordId, onSelect, label?}（null＝科目全体）。URL の keyword が科目のキーワードにない場合の扱いは 4.1 で決める（範囲なしとして範囲選択に留める等）。字下げは深さで無制限に増える（深さ10で約184px）。
 - 4.1: QuizStartPage は URL を初期状態として一度だけ読み、確定した範囲を replace で URL に書き戻す。URL の古い keyword は科目全体にして URL からも外す。解答画面への遷移先は /quiz/play?subject&keyword。
+- 4.2: 読込失敗の再試行は、候補未取得なら loadTry で取り直し、取得済みなら candidatesLoaded(state.candidates) で loading に戻す（解答済み・集計は保持）。候補の取り直し中は error 表示が残る（軽微）。
