@@ -1,0 +1,2 @@
+/* Tailwind の読み込み。テーマトークンと共通 class はこのファイルに追加する。 */
+@import 'tailwindcss';
