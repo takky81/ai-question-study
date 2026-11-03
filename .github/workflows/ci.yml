@@ -1,0 +1,44 @@
+# 品質ゲート: push と pull request ごとに型検査・ユニットテスト・本番ビルド・成果物検査を行う。
+# いずれかのステップが失敗するとジョブが失敗する。
+# E2E はローカル Supabase が必要なため、この CI では実行しない。
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# 権限は読み取りのみ
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    env:
+      # 公開前提の接続設定だけを repository variables から渡す（service_role は渡さない）
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 依存関係の導入
+        run: npm ci
+
+      - name: 型検査
+        run: npm run typecheck
+
+      - name: ユニットテスト
+        run: npm test
+
+      # build script は typecheck → vite build → 404.html 複製を行う。
+      # base は GITHUB_REPOSITORY（Actions が自動設定）から /<リポジトリ名>/ になる。
+      - name: 本番ビルド
+        run: npm run build
+
+      - name: 成果物の検査
+        run: node scripts/check-dist.mjs

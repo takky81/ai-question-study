@@ -124,7 +124,7 @@
 
 - [ ] 6. 統合: CI とデプロイ
 
-- [ ] 6.1 CI の品質ゲートを設定する
+- [x] 6.1 CI の品質ゲートを設定する
   - push と pull request ごとに依存導入、型検査、ユニットテスト、本番ビルドを実行し、いずれかの失敗でジョブを失敗させる
   - ビルド後に 404 用ページがエントリ HTML と同一で、資産参照がサブパス始まりであることを検査する
   - 権限は読み取りのみとし、公開前提の接続設定だけを repository variables から渡す
@@ -161,3 +161,4 @@
 - 2.3: 正誤の印の薄い背景用に `--c-correct-bg` / `--c-incorrect-bg` を追加（design のトークン表にない追加分）。CSS を読むテストは `readFileSync(process.cwd())` で読む（Vitest では `?raw` が空になるため）
 - 4.1: `NavGroup` は共通部品が app/ に依存しないよう `src/components/NavLinks.tsx` で定義し、routes.tsx は import／再 export する。NavLink は前方一致（`end` なし）で下位パスでも親の導線を現在位置にする
 - 5.1: data router のテストは jsdom の AbortSignal と undici が非互換のため、テストファイル内で global Request を signal なしに差し替えている。ルート行の path に `*` を使うと導線リンクが `/x/*` になるため、導線を持つ行は平坦な path で登録する
+- 6.1: CI ワークフローの `name:` は `CI`。6.2 の `workflow_run` は `workflows: [CI]`（ファイル名ではなく name）を参照する。Windows では Vite 開発サーバーが起動中だと `npm ci` が EPERM で失敗するため、開発サーバーを止めてから実行する
