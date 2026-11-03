@@ -94,7 +94,7 @@
   - _Depends: 2.3_
   - _Requirements: 2.5, 5.5, 5.6, 5.7, 6.1, 6.2, 6.3_
 
-- [ ] 3.3 (P) フラグ入力の部品を作る
+- [x] 3.3 (P) フラグ入力の部品を作る
   - フラグ定義の表示名でチェックボックス4つと自由入力欄を表示し、未解消フラグ（「？」エリアで付いた `guessable` を含む）で初期化する
   - 保存中は送信を無効にし、失敗時は入力を保持して失敗の表示と再試行を出す。各入力はラベル付きで 44px の操作領域を持つ
   - コンポーネントテストで、選択済みの初期表示、保存失敗時の入力保持が確認できる
@@ -166,3 +166,4 @@
 - 2.4: session.ts は設計外の nextQuestionId(state) を export（読込中に取得する問題 ID）。answered は読み込んだ選択肢の isCorrect で即時判定し、recordSucceeded で RPC の結果に置き換える。2.5 の API は QuizChoice.isCorrect を必ず渡すこと。
 - 3.1: ChoiceList の props は { choices, selection, correctChoiceId, disabled?, onAnswer(kind, choiceId) }。package.json に lint スクリプトはなく、検証コマンドは typecheck / test / build。
 - 3.2: AnswerFeedback の props は { judged, explanation, keywordIds, keywords: KeywordNode[] }。QuestionStatsBar は aria-live=polite。
+- 3.3: FlagForm は初期値をマウント時だけ読む。4.2 では listOpenFlags の完了後に <FlagForm key={questionId} …/> で描画すること。
