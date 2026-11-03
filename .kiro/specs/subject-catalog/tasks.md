@@ -150,7 +150,7 @@
   - _Depends: 1.1, 1.2, 1.3_
   - _Requirements: 1.1, 1.2, 5.10, 6.4, 6.5, 8.2, 8.3, 8.4_
 
-- [ ] 6.2 科目とキーワード操作の E2E テストを書く
+- [x] 6.2 科目とキーワード操作の E2E テストを書く
   - 科目の作成・改名・重複名・削除（件数の確認表示）を確認する
   - キーワードの追加・兄弟重複・並べ替えの再読込後の維持・部分木の移動・配下への移動拒否、削除時の確認件数と唯一の紐づけを失った問題の無効化を確認する
   - 完了状態: ローカル Supabase で上記テストがすべて成功する
@@ -189,3 +189,4 @@
 - 4.5: QuestionEditPage は URL の subjectId / questionId を UUID 正規表現で先に検証し、不正なら API を呼ばず「見つかりません」にする（22P02 回避）。listKeywords は自前取得。
 - 5.1: KeywordTree に任意の onChanged prop を追加（境界外・後方互換）。CatalogPage は木の操作後に QuestionList の key を更新して再マウントし、キーワードの階層パスを取り直す。router.test.tsx は後続 spec の行追加を前提とする形に修正した。
 - 6.1: keyword_subtree_ids は API 経由だと max_rows=1000 で切り捨てられる（design.md の下流向け注意に記載）。E2E は .range でページングして集合比較している。
+- 6.2: e2e/catalog.spec.ts はファイル単位の beforeEach で desktop 以外をスキップし、db 準備も desktop のみ。6.4 でモバイル幅の describe を足すときは、スキップを各 describe へ移すこと。
