@@ -30,6 +30,7 @@
 - 取込の参照検証・差分計算・適用ペイロード生成の純粋関数（`importValidate.ts`、`diff.ts`、`plan.ts`）
 - 取込 RPC `apply_exchange_import` と、その中での競合検出（`stale_preview`）・一時キーの解決
 - 「修正された問題」の判定（要件 8.2）と、`quiz_private.resolve_question_flags` に渡す問題 ID の決定
+- 注意: `quiz_private.resolve_question_flags` は `quiz.write_via_rpc` をトランザクションの終わりまで有効にする。取込 RPC はこの呼び出しの後に quiz-session のテーブルへ書き込まない。
 - 入出力画面（`ExchangePage` 以下）と、`APP_ROUTES` に追加する行
 - 問題生成 skill `.claude/skills/question-authoring/`
 

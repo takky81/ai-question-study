@@ -361,7 +361,7 @@ sequenceDiagram
   7. 更新後の `question_stats` の行と、正解の選択肢 ID を返す
 - 同じ `client_answer_id` の同時実行で unique 違反（`23505`）が起きた場合は、それを捕捉して手順1と同じ結果を返す。
 - `save_question_flags`（`language plpgsql`、7.2〜7.5）: 問題が所有者の未削除の問題であることを確認する（なければ `question_not_found`。無効の問題も可）。`p_flags` の各値が `guessable`、`low_value`、`needs_explanation`、`defective` のいずれかでなければ `invalid_flag`。未解消のチェック型フラグのうち `p_flags` にない行を削除し、ない識別子を挿入する。`btrim(p_comment)` が空なら未解消の `comment` 行を削除し、空でなければ未解消の `comment` 行の `note` を更新するか挿入する。
-- `srs_next`（`language sql immutable`）の規則。状態が null のときは `stability_days = null`、`ease = 2.5`、回数 0 とみなす:
+- `srs_next`（`language plpgsql immutable`。不正な評価で `invalid_grade` を raise するため）の規則。状態が null のときは `stability_days = null`、`ease = 2.5`、回数 0 とみなす:
 
 | 評価 | `stability_days` | `ease` | `review_count` | `lapse_count` |
 | ------ | ------------------ | -------- | ---------------- | --------------- |
