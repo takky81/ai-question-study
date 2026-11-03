@@ -111,7 +111,7 @@
 
 - [ ] 4. 統合: 画面とルート
 
-- [ ] 4.1 出題範囲の選択画面を作る
+- [x] 4.1 出題範囲の選択画面を作る
   - 科目一覧、範囲の木選択、範囲内の出題対象数と未出題数、開始ボタンを配置し、URL の範囲を初期選択にする
   - 出題対象が0件なら理由を表示して開始を無効にし、開始で範囲付きの解答画面へ遷移する
   - 取得失敗時にエラーと再試行を表示する
@@ -168,3 +168,4 @@
 - 3.2: AnswerFeedback の props は { judged, explanation, keywordIds, keywords: KeywordNode[] }。QuestionStatsBar は aria-live=polite。
 - 3.3: FlagForm は初期値をマウント時だけ読む。4.2 では listOpenFlags の完了後に <FlagForm key={questionId} …/> で描画すること。
 - 3.4: KeywordRangePicker は制御型 {keywords, selectedKeywordId, onSelect, label?}（null＝科目全体）。URL の keyword が科目のキーワードにない場合の扱いは 4.1 で決める（範囲なしとして範囲選択に留める等）。字下げは深さで無制限に増える（深さ10で約184px）。
+- 4.1: QuizStartPage は URL を初期状態として一度だけ読み、確定した範囲を replace で URL に書き戻す。URL の古い keyword は科目全体にして URL からも外す。解答画面への遷移先は /quiz/play?subject&keyword。
