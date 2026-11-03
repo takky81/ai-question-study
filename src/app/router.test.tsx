@@ -59,7 +59,7 @@ beforeEach(() => {
 
 describe('toNavItems', () => {
   it('nav を持つルートだけを区分内の表示順で導線項目にする（5.6）', () => {
-    const items = toNavItems(TEST_ROUTES);
+    const items = toNavItems(TEST_ROUTES.slice(APP_ROUTES.length));
     expect(items.map((i) => [i.path, i.label, i.group, i.order])).toEqual([
       ['/a', 'A', 'learn', 1],
       ['/m', 'M', 'manage', 1],
@@ -67,11 +67,13 @@ describe('toNavItems', () => {
     ]);
   });
 
-  it('初期の登録表（ホームとログイン）からは導線を作らない', () => {
-    expect(toNavItems(APP_ROUTES)).toEqual([]);
-    expect(APP_ROUTES.map((r) => [r.path, r.public ?? false])).toEqual([
-      ['', false],
-      ['login', true],
+  it('ホームとログインは導線を作らない（後続 spec の行は追加のみ）', () => {
+    const navPaths = toNavItems(APP_ROUTES).map((i) => i.path);
+    expect(navPaths).not.toContain('/');
+    expect(navPaths).not.toContain('/login');
+    expect(APP_ROUTES.slice(0, 2).map((r) => [r.path, r.public ?? false, r.nav])).toEqual([
+      ['', false, undefined],
+      ['login', true, undefined],
     ]);
   });
 });

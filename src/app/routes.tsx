@@ -1,9 +1,11 @@
 // ルート登録表。後続 spec はここに1行追加するだけで画面と導線を組み込む（1.4）。
-import type { LucideIcon } from 'lucide-react';
+import { FolderTree, type LucideIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 
 // NavGroup は共通部品側（src/components/NavLinks.tsx）で定義し、ここでは import して再 export する。
 import type { NavGroup, NavItem } from '../components/NavLinks';
+import { CatalogPage } from '../features/catalog/CatalogPage';
+import { QuestionEditPage } from '../features/catalog/QuestionEditPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { HomePage } from '../features/home/HomePage';
 
@@ -31,6 +33,10 @@ export const APP_ROUTES: readonly AppRoute[] = [
   // ホームは導線なし。ヘッダーのアプリ名がホームへのリンクになる（5.1）
   { path: '', element: <HomePage /> },
   { path: 'login', element: <LoginPage />, public: true },
+  { path: 'catalog', element: <CatalogPage />, nav: { label: 'カタログ', group: 'manage', icon: FolderTree, order: 1 } },
+  { path: 'catalog/:subjectId', element: <CatalogPage /> },
+  { path: 'catalog/:subjectId/questions/new', element: <QuestionEditPage /> },
+  { path: 'catalog/:subjectId/questions/:questionId', element: <QuestionEditPage /> },
 ];
 
 /** nav を持つルートだけを、表示順（同順位は登録順）で導線項目にする（5.6）。 */

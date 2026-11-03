@@ -40,6 +40,8 @@ type Props = {
   /** 選択中のキーワード（問題一覧の絞り込みに使う） */
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** 木の変更操作（成功・失敗とも）の後に呼ぶ。問題一覧のキーワード表示を更新させる */
+  onChanged?: () => void;
 };
 
 /** 表示順（前順）に並べた行。展開中の子だけを含めると「見えている行」になる */
@@ -81,6 +83,7 @@ export function KeywordTree({
   subjectId,
   selectedId,
   onSelect,
+  onChanged,
 }: Props): ReactElement {
   const baseId = useId();
   const [keywords, setKeywords] = useState<Keyword[]>([]);
@@ -198,6 +201,7 @@ export function KeywordTree({
       return false;
     } finally {
       setBusy(false);
+      onChanged?.();
     }
   }
 

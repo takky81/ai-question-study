@@ -131,7 +131,7 @@
 
 - [ ] 5. 統合: 画面の組み込み
 
-- [ ] 5.1 カタログ画面を組み立ててルート登録表に追加する
+- [x] 5.1 カタログ画面を組み立ててルート登録表に追加する
   - 科目一覧、科目内の木と一覧（PC 幅は2列、モバイル幅はタブ切替で横スクロールなし）を配置し、木で選んだキーワードを一覧の絞り込みに渡す
   - 管理区分の導線「カタログ」と、科目・新規問題・問題編集のルートを登録する（保護ルートの既定に従う）
   - 完了状態（6.4 の E2E で確認する）: ログイン後に管理区分の導線からカタログを開け、木のキーワード選択で一覧が配下の問題に絞り込まれる
@@ -187,3 +187,4 @@
 - 4.3: QuestionList は listKeywords を自前で取得する（KeywordTree と二重取得）。5.1 の CatalogPage で木の編集後に一覧のキーワードも再取得させるか、キーワードを CatalogPage から渡す形に統合すること。
 - 4.4: ChoiceEditor / KeywordPicker は任意の describedBy prop を持つ（4.5 で欄ごとのエラーと結び付ける）。選択肢の key は配列添字（新規は id が null のため）。
 - 4.5: QuestionEditPage は URL の subjectId / questionId を UUID 正規表現で先に検証し、不正なら API を呼ばず「見つかりません」にする（22P02 回避）。listKeywords は自前取得。
+- 5.1: KeywordTree に任意の onChanged prop を追加（境界外・後方互換）。CatalogPage は木の操作後に QuestionList の key を更新して再マウントし、キーワードの階層パスを取り直す。router.test.tsx は後続 spec の行追加を前提とする形に修正した。
