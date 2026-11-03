@@ -86,7 +86,7 @@
 
 - [ ] 4. コア: 共通レイアウト
 
-- [ ] 4.1 (P) ナビゲーション導線の描画部品を実装する
+- [x] 4.1 (P) ナビゲーション導線の描画部品を実装する
   - 渡された導線項目を学習系・管理系の区分ごとに表示順で描画し、項目のない区分は見出しごと表示しない
   - 現在位置の導線に `aria-current` と、色以外の強調（太字と下線、または上ボーダー）を付ける
   - サイドナビ・下部バー・メニュー用の表示形態を持ち、各導線を 44px 以上にする
@@ -159,3 +159,4 @@
 - 1.1: `@vitejs/plugin-react` 6.x は vite 8 を要求するため 5.x に固定。typecheck は 1.2 で vite.config.ts を追加したら `tsconfig.node.json` も検査対象に加える。npm 11 で vite が動かない場合は esbuild の install script を承認する
 - 1.4: ローカル Supabase のポートは他プロジェクトとの衝突を避けるため 545xx（API 54521、DB 54522、Studio 54523、Mailpit 54524）。seed の所有者アカウントは owner@example.com / owner-password-local（ローカル専用）
 - 2.3: 正誤の印の薄い背景用に `--c-correct-bg` / `--c-incorrect-bg` を追加（design のトークン表にない追加分）。CSS を読むテストは `readFileSync(process.cwd())` で読む（Vitest では `?raw` が空になるため）
+- 4.1: `NavGroup` は共通部品が app/ に依存しないよう `src/components/NavLinks.tsx` で定義し、routes.tsx は import／再 export する。NavLink は前方一致（`end` なし）で下位パスでも親の導線を現在位置にする

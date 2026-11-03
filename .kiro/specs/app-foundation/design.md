@@ -286,7 +286,9 @@ graph LR
 import type { LucideIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 
-export type NavGroup = 'learn' | 'manage';
+// NavGroup は共通部品側（src/components/NavLinks.tsx）で定義し、routes.tsx は import して再 export する。
+import type { NavGroup } from '../components/NavLinks';
+export type { NavGroup };
 
 export type AppRoute = {
   path: string;              // basename からの相対。例: 'quiz'
@@ -402,6 +404,7 @@ export function resolveRedirect(param: string | null): string;    // 検証済�
 #### AppLayout / NavLinks
 
 ```typescript
+export type NavGroup = 'learn' | 'manage'; // 定義元。routes.tsx はこれを再 export する
 export type NavItem = { path: string; label: string; group: NavGroup; icon: LucideIcon; order: number };
 export function AppLayout(props: { navItems: readonly NavItem[]; onSignOut: () => Promise<void> }): ReactElement;
 export function NavLinks(props: { items: readonly NavItem[]; variant: 'sidebar' | 'bottom' | 'menu' }): ReactElement;
