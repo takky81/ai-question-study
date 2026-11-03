@@ -157,7 +157,7 @@
 ## Implementation Notes
 
 - 1.1: `@vitejs/plugin-react` 6.x は vite 8 を要求するため 5.x に固定。typecheck は 1.2 で vite.config.ts を追加したら `tsconfig.node.json` も検査対象に加える。npm 11 で vite が動かない場合は esbuild の install script を承認する
-- 1.4: ローカル Supabase のポートは他プロジェクトとの衝突を避けるため 545xx（API 54521、DB 54522、Studio 54523、Mailpit 54524）。seed の所有者アカウントは owner@example.com / owner-password-local（ローカル専用）
+- 1.4: ローカル Supabase のポートは他プロジェクトとの衝突を避けるため 545xx（API 54521、DB 54522、Studio 54523、Mailpit 54524）。seed の所有者アカウントは `owner@example.com` / `owner-password-local`（ローカル専用）
 - 2.3: 正誤の印の薄い背景用に `--c-correct-bg` / `--c-incorrect-bg` を追加（design のトークン表にない追加分）。CSS を読むテストは `readFileSync(process.cwd())` で読む（Vitest では `?raw` が空になるため）
 - 4.1: `NavGroup` は共通部品が app/ に依存しないよう `src/components/NavLinks.tsx` で定義し、routes.tsx は import／再 export する。NavLink は前方一致（`end` なし）で下位パスでも親の導線を現在位置にする
 - 5.1: data router のテストは jsdom の AbortSignal と undici が非互換のため、テストファイル内で global Request を signal なしに差し替えている。ルート行の path に `*` を使うと導線リンクが `/x/*` になるため、導線を持つ行は平坦な path で登録する
