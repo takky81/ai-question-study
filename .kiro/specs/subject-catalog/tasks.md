@@ -110,7 +110,7 @@
   - _Depends: 2.1, 2.3, 3.2, 4.1_
   - _Requirements: 6.1, 6.2, 6.3, 6.6, 7.1, 7.3, 7.4, 7.6, 7.7, 8.5_
 
-- [ ] 4.4 選択肢編集とキーワード選択を実装する
+- [x] 4.4 選択肢編集とキーワード選択を実装する
   - 選択肢ごとの本文・解説・正解のラジオ（1つだけ）・上へ／下へ／削除を作り、正解に正解色の共通 class と ○ の印を付ける（警告色は使わない）
   - 科目の木からキーワードを葉・途中の区別なく複数選べ、選択済みを階層パスで表示する選択部品を作る
   - コンポーネントテスト: 正解が1つに限られる、正解の印と class、「わからない」がない
@@ -185,3 +185,4 @@
 - 3.1: 実 DB で確認した形: `preview_keyword_deletion` / `delete_keyword` は単一オブジェクト（snake_case）を返す。RPC のエラーは `code: P0001`、`message` がエラーコードそのもの。一意制約は 23505、check 制約は 23514。`toCatalogErrorMessage` は 23514 を「名前を入力してください」にするため、3.2 で問題本文・選択肢など他の check 制約に使うときは制約名で文言を分ける。3.2 では question_not_found / choice_not_in_question / question_deleted の文言を追加する
 - 4.1: ConfirmDialog はモーダル表示中に背後が操作・読み上げ不可になるため、ダイアログ中の失敗は `error` prop でダイアログ内に表示する（後続の削除確認でも同様にする）
 - 4.3: QuestionList は listKeywords を自前で取得する（KeywordTree と二重取得）。5.1 の CatalogPage で木の編集後に一覧のキーワードも再取得させるか、キーワードを CatalogPage から渡す形に統合すること。
+- 4.4: ChoiceEditor / KeywordPicker は任意の describedBy prop を持つ（4.5 で欄ごとのエラーと結び付ける）。選択肢の key は配列添字（新規は id が null のため）。
