@@ -135,7 +135,7 @@
 
 - [ ] 5. 検証: DB と利用者経路の E2E
 
-- [ ] 5.1 DB の E2E テストを作る
+- [x] 5.1 DB の E2E テストを作る
   - 別の所有者から履歴・SRS 状態・フラグ・両集計ビューが見えないこと、3テーブルへの直接書き込みが拒否されることを確認する
   - SRS の更新計算の規則表、解答記録の冪等性・正誤判定・「？」での SRS 不変と `guessable` 付与・他の問題の選択肢の拒否・無効化後の拒否を確認する
   - 問題の無効化・削除後も履歴が残り集計から除外されること、キーワード集計の部分木・重複なし・0件の値を確認する
@@ -171,3 +171,4 @@
 - 4.1: QuizStartPage は URL を初期状態として一度だけ読み、確定した範囲を replace で URL に書き戻す。URL の古い keyword は科目全体にして URL からも外す。解答画面への遷移先は /quiz/play?subject&keyword。
 - 4.2: 読込失敗の再試行は、候補未取得なら loadTry で取り直し、取得済みなら candidatesLoaded(state.candidates) で loading に戻す（解答済み・集計は保持）。候補の取り直し中は error 表示が残る（軽微）。
 - 4.3: 学習区分に「出題」が加わったため router.test.tsx の 5.6 の間接テストを書き換えた（5.6 は NavLinks.test.tsx と AppLayout.test.tsx で確認）。モバイル下部バーの「出題」は 5.2 の E2E で確認する。
+- 5.1: e2e/quiz-db.spec.ts の SQL 接続は docker exec psql（SUPABASE_DB_CONTAINER で変更可、CI では E2E を実行しない）。後片付けは子テーブルだけ session_replication_role=replica で消してから科目を削除する。seed の問題には解答を作らない。
