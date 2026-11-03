@@ -1,2 +1,85 @@
-/* Tailwind の読み込み。テーマトークンと共通 class はこのファイルに追加する。 */
 @import 'tailwindcss';
+
+/* テーマトークン（ライト）。値のコントラスト比は src/theme.test.ts で検証する（6.4） */
+:root {
+  color-scheme: light dark;
+  --c-bg: #ffffff;
+  --c-surface: #f5f5f4;
+  --c-text: #1c1917;
+  --c-text-muted: #57534e;
+  --c-border: #d6d3d1;
+  --c-primary: #4f46e5;
+  /* 正解は赤、不正解は青。警告（橙）とは別トークン（6.2） */
+  --c-correct: #c81e1e;
+  --c-correct-bg: #fef2f2;
+  --c-incorrect: #1d4ed8;
+  --c-incorrect-bg: #eff6ff;
+  --c-warn: #b45309;
+}
+
+/* ダーク: 端末設定に追従する（6.3） */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-bg: #0c0a09;
+    --c-surface: #1c1917;
+    --c-text: #f5f5f4;
+    --c-text-muted: #a8a29e;
+    --c-border: #44403c;
+    --c-primary: #a5b4fc;
+    --c-correct: #f87171;
+    --c-correct-bg: #2a1414;
+    --c-incorrect: #60a5fa;
+    --c-incorrect-bg: #111c2e;
+    --c-warn: #fbbf24;
+  }
+}
+
+/* トークンを Tailwind のユーティリティ（text-correct、border-incorrect など）として公開する（6.1） */
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-text: var(--c-text);
+  --color-text-muted: var(--c-text-muted);
+  --color-border: var(--c-border);
+  --color-primary: var(--c-primary);
+  --color-correct: var(--c-correct);
+  --color-correct-bg: var(--c-correct-bg);
+  --color-incorrect: var(--c-incorrect);
+  --color-incorrect-bg: var(--c-incorrect-bg);
+  --color-warn: var(--c-warn);
+}
+
+body {
+  background-color: var(--c-bg);
+  color: var(--c-text);
+}
+
+/* キーボード操作時のフォーカス表示（6.6） */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 2px;
+}
+
+/* 44px 以上の操作領域（6.6） */
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* 選択状態は太い枠線の形状で示し、正誤の色とは独立させる（6.5） */
+.choice-selected {
+  border-width: 3px;
+  border-style: solid;
+  border-color: var(--c-text);
+}
+
+/* 正誤の印: 正誤色と薄い背景。○／× のアイコンは利用側が併置する（6.5） */
+.mark-correct {
+  color: var(--c-correct);
+  background-color: var(--c-correct-bg);
+}
+
+.mark-incorrect {
+  color: var(--c-incorrect);
+  background-color: var(--c-incorrect-bg);
+}

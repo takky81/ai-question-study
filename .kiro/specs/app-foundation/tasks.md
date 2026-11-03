@@ -49,7 +49,7 @@
   - _Boundary: pagination.ts_
   - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 2.3 (P) テーマトークンと共通 class を定義する
+- [x] 2.3 (P) テーマトークンと共通 class を定義する
   - 背景・面・本文・補助・枠線・主操作・正解（赤）・不正解（青）・警告（橙）のトークンをライト／ダークで定義し、端末設定に追従させる
   - トークンを Tailwind のユーティリティとして参照できるようにする
   - フォーカス表示、44px の操作領域、選択状態（枠形状）、正誤の印の共通 class を定義する
@@ -158,3 +158,4 @@
 
 - 1.1: `@vitejs/plugin-react` 6.x は vite 8 を要求するため 5.x に固定。typecheck は 1.2 で vite.config.ts を追加したら `tsconfig.node.json` も検査対象に加える。npm 11 で vite が動かない場合は esbuild の install script を承認する
 - 1.4: ローカル Supabase のポートは他プロジェクトとの衝突を避けるため 545xx（API 54521、DB 54522、Studio 54523、Mailpit 54524）。seed の所有者アカウントは owner@example.com / owner-password-local（ローカル専用）
+- 2.3: 正誤の印の薄い背景用に `--c-correct-bg` / `--c-incorrect-bg` を追加（design のトークン表にない追加分）。CSS を読むテストは `readFileSync(process.cwd())` で読む（Vitest では `?raw` が空になるため）
