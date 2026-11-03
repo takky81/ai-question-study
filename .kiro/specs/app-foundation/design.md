@@ -490,3 +490,16 @@ export function NavLinks(props: { items: readonly NavItem[]; variant: 'sidebar' 
 - 登録無効化: ローカルは `config.toml` の `[auth] enable_signup = false`。Supabase Cloud は Auth 設定で新規登録を無効にし、所有者アカウントはダッシュボードから作成する。この確認をデプロイ手順に含める（3.7、3.8）。
 - 遷移先はアプリ内パスに限定する（`resolveRedirect`）。
 - ワークフローの権限は最小にする（CI は `contents: read`、デプロイは `pages: write`、`id-token: write`）。
+
+## 実装時に確定した差分
+
+実装とレビューを経て、上記の設計から次の点を確定・追加した。後続 spec はこの内容を前提にする。
+
+- **起動処理の分割**: `main.tsx` は `bootstrap()` を呼ぶだけにした。環境変数の検証と分岐は `src/app/bootstrap.tsx`、`AuthProvider` と `RouterProvider` の組み立ては `src/app/App.tsx`（動的 import）が担う。
+- **アプリ本体の読み込み失敗**: 分割ファイルの読み込みに失敗した場合（デプロイ直後の古い画面など）は、空白にせず「読み込みに失敗しました。ページを再読み込みしてください。」を `role="alert"` で表示し、`console.error` に記録する。
+- **描画時例外の画面**: `src/app/RouteErrorPage.tsx` を root と保護レイアウト内の両方の errorElement に使う。
+- **トークンの追加**: 正誤の印の薄い背景用に `--c-correct-bg` / `--c-incorrect-bg` を追加した（`.mark-*` が使用）。
+- **下部バーのセーフエリア**: モバイルの下部学習バーは `env(safe-area-inset-bottom)` の余白を持ち、`index.html` の viewport に `viewport-fit=cover` を指定する。
+- **成果物検査**: `scripts/check-dist.mjs` が 404.html の同一性とサブパス始まりの資産参照を検査する。base の決定規則は `src/lib/basePath.ts` と同じ規則を複製しているため、どちらかを変える場合は両方を更新する（Revalidation Trigger）。
+- **テスト資産**: `e2e/helpers.ts` にログイン・ログアウトの共通処理を置く。data router のテストは jsdom の AbortSignal と undici の非互換のため、テストファイル内で global `Request` を差し替える。
+- **ローカル環境**: ローカル Supabase のポートは 545xx（API 54521）。`vite preview` で成果物を確認する場合は `--base /<リポジトリ名>/` を指定する（preview は開発扱いで base が `/` になるため）。
