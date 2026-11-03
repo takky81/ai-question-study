@@ -458,9 +458,13 @@ export type QuestionFilter = {
 };
 export function parseFilter(params: URLSearchParams): QuestionFilter;   // 不正値は既定値
 export function toSearchParams(filter: QuestionFilter): URLSearchParams;
+export const DEFAULT_FILTER: QuestionFilter;
+export type SearchQuestionsArgs = { p_subject_id: string; p_keyword_id: string | null; p_kind: QuestionKind | null; p_status: QuestionStatus | null; p_text: string | null };
+export function toSearchArgs(subjectId: string, filter: QuestionFilter): SearchQuestionsArgs;   // 未指定・空文字は null、page は含めない
 ```
 
 - 絞り込み条件は URL に保持し、編集画面から戻ったとき同じ一覧に戻れるようにする（7.3）。
+- URL のキーは `keyword`、`kind`、`status`、`q`（検索語）、`page` とし、既定値の項目は URL に含めない。`toSearchArgs` は `search_questions` の引数に対応させ、ページは api.ts の range で扱う。
 
 #### api.ts
 
