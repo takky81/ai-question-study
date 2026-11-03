@@ -85,7 +85,7 @@
   - _Depends: 2.1_
   - _Requirements: 4.1, 4.3, 4.6, 4.7, 5.1, 5.2, 5.3, 5.4, 5.5, 5.7, 5.8, 10.3, 10.4_
 
-- [ ] 3.2 (P) 成績表示・判定後の解説・終了表示の部品を作る
+- [x] 3.2 (P) 成績表示・判定後の解説・終了表示の部品を作る
   - 出題中の問題の正答数・出題数・正答率を表示し、出題数0は「未出題」とする
   - 判定後に問題の解説と、紐づく各キーワードの階層パス（上流の階層パス関数を使用）を表示し、判定前は描画しない
   - セッションの解答数・正答数と範囲選択へ戻る導線を表示する
@@ -165,3 +165,4 @@
 - 2.3: 百分率は Math.round の整数。不正な keyword は範囲全体を null にする（範囲選択へ置換遷移）。UUID 正規表現は QuestionEditPage と重複しており、共通化は別タスクで検討。
 - 2.4: session.ts は設計外の nextQuestionId(state) を export（読込中に取得する問題 ID）。answered は読み込んだ選択肢の isCorrect で即時判定し、recordSucceeded で RPC の結果に置き換える。2.5 の API は QuizChoice.isCorrect を必ず渡すこと。
 - 3.1: ChoiceList の props は { choices, selection, correctChoiceId, disabled?, onAnswer(kind, choiceId) }。package.json に lint スクリプトはなく、検証コマンドは typecheck / test / build。
+- 3.2: AnswerFeedback の props は { judged, explanation, keywordIds, keywords: KeywordNode[] }。QuestionStatsBar は aria-live=polite。
