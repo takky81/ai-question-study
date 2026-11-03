@@ -23,7 +23,7 @@
   - 完了状態: モジュール隣に置いたサンプルのユニットテストと、トップ画面を開くだけの E2E がそれぞれ成功する
   - _Requirements: 8.5, 8.6_
 
-- [ ] 1.4 ローカル Supabase と所有者アカウントを設定する
+- [x] 1.4 ローカル Supabase と所有者アカウントを設定する
   - ローカル Supabase を初期化し、新規登録を無効化し、サイト URL を開発サーバーに合わせる
   - ローカル専用の所有者アカウントを seed で作成する（本番には適用しない）
   - 業務 migration は追加しない
@@ -157,3 +157,4 @@
 ## Implementation Notes
 
 - 1.1: `@vitejs/plugin-react` 6.x は vite 8 を要求するため 5.x に固定。typecheck は 1.2 で vite.config.ts を追加したら `tsconfig.node.json` も検査対象に加える。npm 11 で vite が動かない場合は esbuild の install script を承認する
+- 1.4: ローカル Supabase のポートは他プロジェクトとの衝突を避けるため 545xx（API 54521、DB 54522、Studio 54523、Mailpit 54524）。seed の所有者アカウントは owner@example.com / owner-password-local（ローカル専用）
