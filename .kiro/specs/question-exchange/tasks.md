@@ -18,7 +18,7 @@
   - _Depends: 1.1_
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 7.2, 8.1, 8.4, 8.5, 10.7_
 
-- [ ] 1.3 交換フォーマットの型と読み込み検証を作る
+- [x] 1.3 交換フォーマットの型と読み込み検証を作る
   - 出力用・取込用のフォーマット識別子とバージョン、キーワード参照（既存 ID または一時キー）、出力ファイルと取込ファイルの型を、上流の問題種別とフラグ識別子の型を使って定義する。削除・有効化の操作は型に持たない
   - 取込ファイルの文字列を読み、壊れた JSON・種類違い・対応外のバージョンはそれだけを返し、それ以外は必須欠落・型違い・未知の項目や操作を、何番目のどの要素のどの項目かの位置付きですべて返す検証関数を作る。省略された配列は空に正規化する
   - 出力ファイルを読む検証関数も同じ規則で作る
@@ -177,3 +177,4 @@
 - 1.1: export の p_filter のキーは flag / flagTypes / correctRateMin / correctRateMax / attemptMin / attemptMax / attempted / includeDisabled（2.1 の toExportFilter はこの名前で出す）。無効の問題は question_stats に行がないため集計値は 0・null（design どおり。4.2 の SKILL.md に一言添える）。
 - 共通: 部分木での絞り込みは DB 側で行い、ID 一覧をクライアントへ返さない（API 経由は 1,000 行で切り捨て）。日時は Date.parse で比べる。タスク完了時の報告の STATUS は READY_FOR_REVIEW 等の決まった値にする。
 - 1.2: questionUpdates は { input }（input.id 必須）。keywordMoves は配列順に1件ずつ move_keyword するので、2.4 は各段階で循環しない順に並べる。keyword_not_found / question_not_found は 2.5 の toExchangeErrorMessage で汎用メッセージに落ちる。正解1つの検査はコミット時に P0001 one_correct_required。
+- 1.3: 検証ライブラリは使わず parse.ts の小さなスキーマ走査で検査する。キーの有無は Object.hasOwn で判定（constructor 等の継承名も未知の項目として報告）。IMPORT_FIELD_NAMES / EXPORT_FIELD_NAMES は 4.1 で追加する。
