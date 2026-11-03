@@ -564,6 +564,7 @@ erDiagram
 
 - question-exchange: 既存要素は `questions.id`、`choices.id`、`keywords.id` で参照する。取込 RPC は問題を `public.save_question` で、キーワード追加は `keywords` への直接 insert（`sort_order` null で末尾トリガー）で書き込み、移動は `move_keyword`、無効化は `set_question_disabled` を使う。いずれも本 spec のテーブル制約（遅延の正解検査を含む）の下で動作し、外された選択肢には `removed_at` を設定する規則に従う。
 - quiz-session: 解答履歴は `questions.id` と `choices.id` を外部キーで参照してよい（行は物理削除されない。キーワード削除・科目削除でも問題と選択肢は残る）。出題候補は `servable_questions` から選ぶ。キーワード単位の集計範囲は `keyword_subtree_ids` を使う。
+- 注意: `keyword_subtree_ids` を PostgREST 経由でクライアントから呼ぶと、結果は `max_rows = 1000` で黙って切り捨てられる。下流 spec は部分木での絞り込み・集計をサーバー側の関数やビューの中で結合し、ID 一覧をクライアントへ返さない（やむを得ず受け取る場合は `.range` でページングする）。
 
 ## Error Handling
 

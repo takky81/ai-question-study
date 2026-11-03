@@ -141,7 +141,7 @@
 
 - [ ] 6. 検証: E2E と DB 統合
 
-- [ ] 6.1 RLS と DB 制約の E2E テストを書く
+- [x] 6.1 RLS と DB 制約の E2E テストを書く
   - 別アカウントから所有者の科目・問題が見えず、更新・削除が反映されないことを確認する
   - 正解0個・2個、他科目への紐づけ、循環する親が失敗すること、削除状態の問題の選択肢が残り出題対象ビューに無効・削除の問題が含まれないことを確認する
   - 深さ10・兄弟1,200件の木はテスト内のセットアップで所有者アカウントに作成し、終了時に削除する。この木で部分木関数が全件を重複なく返し、存在しない ID で0行になることを確認する
@@ -188,3 +188,4 @@
 - 4.4: ChoiceEditor / KeywordPicker は任意の describedBy prop を持つ（4.5 で欄ごとのエラーと結び付ける）。選択肢の key は配列添字（新規は id が null のため）。
 - 4.5: QuestionEditPage は URL の subjectId / questionId を UUID 正規表現で先に検証し、不正なら API を呼ばず「見つかりません」にする（22P02 回避）。listKeywords は自前取得。
 - 5.1: KeywordTree に任意の onChanged prop を追加（境界外・後方互換）。CatalogPage は木の操作後に QuestionList の key を更新して再マウントし、キーワードの階層パスを取り直す。router.test.tsx は後続 spec の行追加を前提とする形に修正した。
+- 6.1: keyword_subtree_ids は API 経由だと max_rows=1000 で切り捨てられる（design.md の下流向け注意に記載）。E2E は .range でページングして集合比較している。
