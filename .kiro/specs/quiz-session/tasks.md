@@ -76,7 +76,7 @@
 
 - [ ] 3. コア: 解答画面の部品
 
-- [ ] 3.1 (P) 選択肢一覧の部品を作る
+- [x] 3.1 (P) 選択肢一覧の部品を作る
   - 各選択肢に、本文の選択領域と、右端の独立した「？」エリア（44px 以上、境界線と間隔、推測で解答することを示すラベル）を置き、末尾に「？」のない固定の「わからない」を置く
   - 判定後は、選んだ選択肢に選択表示、正解に正解の色と ○、選んだ不正解（「わからない」を含む）に誤答の色と × を1つの選択肢内で同時に示し、選択肢の解説を枠内に表示し、操作を不可にする。判定前は印と解説を出さない
   - 正誤の色は共通トークンだけを使い、警告色を使わず、キーボード操作とフォーカス表示を持つ
@@ -164,3 +164,4 @@
 - 2.2: DB の timestamptz の JSON は小数秒の桁数が可変で、オフセットも異なり得るため、日時は文字列でなく Date.parse で比べる。
 - 2.3: 百分率は Math.round の整数。不正な keyword は範囲全体を null にする（範囲選択へ置換遷移）。UUID 正規表現は QuestionEditPage と重複しており、共通化は別タスクで検討。
 - 2.4: session.ts は設計外の nextQuestionId(state) を export（読込中に取得する問題 ID）。answered は読み込んだ選択肢の isCorrect で即時判定し、recordSucceeded で RPC の結果に置き換える。2.5 の API は QuizChoice.isCorrect を必ず渡すこと。
+- 3.1: ChoiceList の props は { choices, selection, correctChoiceId, disabled?, onAnswer(kind, choiceId) }。package.json に lint スクリプトはなく、検証コマンドは typecheck / test / build。
