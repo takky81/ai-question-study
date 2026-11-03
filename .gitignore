@@ -1,0 +1,28 @@
+# 依存関係
+node_modules/
+
+# 生成物
+dist/
+*.tsbuildinfo
+
+# テスト結果
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+coverage/
+
+# ローカル環境変数
+.env.local
+.env.*.local
+
+# 出力・生成した交換用 JSON
+exchange-data/
+
+# Supabase CLI のローカル一時ファイル
+supabase/.temp/
+supabase/.branches/
+
+# ログ・OS
+*.log
+.DS_Store
