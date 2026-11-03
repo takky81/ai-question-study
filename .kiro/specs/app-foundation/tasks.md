@@ -106,7 +106,7 @@
 
 - [ ] 5. 統合: ルート合成とアプリ起動
 
-- [ ] 5.1 ルート登録表とルーター、ホーム・404 画面を組み込む
+- [x] 5.1 ルート登録表とルーター、ホーム・404 画面を組み込む
   - 後続 spec が1行追加するだけで画面と導線を組み込めるルート登録表を作り、ホーム（導線なし）とログイン（公開）を登録する
   - 公開指定のないルートを保護ルートかつ共通レイアウト内に配置し、導線メタデータを持つルートだけを導線項目として渡す
   - Router の basename をビルドの base から導出して同期させる
@@ -160,3 +160,4 @@
 - 1.4: ローカル Supabase のポートは他プロジェクトとの衝突を避けるため 545xx（API 54521、DB 54522、Studio 54523、Mailpit 54524）。seed の所有者アカウントは owner@example.com / owner-password-local（ローカル専用）
 - 2.3: 正誤の印の薄い背景用に `--c-correct-bg` / `--c-incorrect-bg` を追加（design のトークン表にない追加分）。CSS を読むテストは `readFileSync(process.cwd())` で読む（Vitest では `?raw` が空になるため）
 - 4.1: `NavGroup` は共通部品が app/ に依存しないよう `src/components/NavLinks.tsx` で定義し、routes.tsx は import／再 export する。NavLink は前方一致（`end` なし）で下位パスでも親の導線を現在位置にする
+- 5.1: data router のテストは jsdom の AbortSignal と undici が非互換のため、テストファイル内で global Request を signal なしに差し替えている。ルート行の path に `*` を使うと導線リンクが `/x/*` になるため、導線を持つ行は平坦な path で登録する
