@@ -1,7 +1,18 @@
-// カタログの DB 呼び出し（科目・キーワード）、行変換、エラーの日本語化。
+// カタログの DB 呼び出し（科目・キーワード・問題）、行変換、エラーの日本語化。
 import { supabase } from '../../lib/supabase';
 import { fetchAllPages } from '../../lib/pagination';
-import type { Keyword, Subject } from './types';
+import { toSearchArgs, type QuestionFilter } from './filters';
+import type {
+  Keyword,
+  Question,
+  QuestionInput,
+  QuestionKind,
+  QuestionListItem,
+  Subject,
+} from './types';
+
+// 問題一覧の1ページの件数（7.4）
+export const QUESTION_PAGE_SIZE = 50;
 
 type DbError = { code?: string; message: string };
 
@@ -37,12 +48,29 @@ const P0001_MESSAGES: Record<string, string> = {
   no_keyword: '紐づくキーワードがないため有効にできません',
   one_correct_required: '正解は1つにしてください',
   duplicate_choice_id: '選択肢の指定が重複しています',
+  question_not_found: '問題が見つかりません',
+  question_deleted: '削除済みの問題は変更できません',
+  choice_not_in_question: 'この問題にない選択肢が指定されています',
 };
+
+// check 違反（23514）の制約名ごとの文言。該当しないもの（科目・キーワードの名前）は名前の文言にする
+const CHECK_MESSAGES: Record<string, string> = {
+  questions_stem_check: '問題文を入力してください',
+  questions_explanation_check: '問題の解説を入力してください',
+  questions_kind_check: '問題の種別が正しくありません',
+  choices_body_check: '選択肢の本文を入力してください',
+  choices_explanation_check: '選択肢の解説を入力してください',
+};
+
+function checkMessage(error: DbError): string {
+  const hit = Object.entries(CHECK_MESSAGES).find(([c]) => error.message.includes(c));
+  return hit ? hit[1] : '名前を入力してください';
+}
 
 // DB・RPC のエラーを画面表示用の日本語に変換する。未知のものは操作の文脈を付ける。
 export function toCatalogErrorMessage(context: string, error: DbError): string {
   if (error.code === '23505') return '同じ名前がすでにあります';
-  if (error.code === '23514') return '名前を入力してください';
+  if (error.code === '23514') return checkMessage(error);
   if (error.code === 'P0001') {
     const known = P0001_MESSAGES[error.message];
     if (known) return known;
@@ -81,8 +109,65 @@ function toKeywordDeletionImpact(
   };
 }
 
+type QuestionRow = {
+  id: string;
+  subject_id: string;
+  kind: QuestionKind;
+  stem: string;
+  explanation: string;
+  disabled_at: string | null;
+  disabled_reason: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+type ChoiceRow = { id: string; body: string; explanation: string; is_correct: boolean };
+type QuestionListRow = {
+  id: string;
+  kind: QuestionKind;
+  stem: string;
+  created_at: string;
+  disabled_at: string | null;
+  keyword_ids: string[] | null;
+};
+
+function toQuestionListItem(row: QuestionListRow): QuestionListItem {
+  return {
+    id: row.id,
+    kind: row.kind,
+    stem: row.stem,
+    status: row.disabled_at ? 'disabled' : 'active',
+    keywordIds: row.keyword_ids ?? [],
+    createdAt: row.created_at,
+  };
+}
+
+function toQuestion(row: QuestionRow, choices: ChoiceRow[], keywordIds: string[]): Question {
+  return {
+    id: row.id,
+    subjectId: row.subject_id,
+    kind: row.kind,
+    stem: row.stem,
+    explanation: row.explanation,
+    keywordIds,
+    choices: choices.map((c) => ({
+      id: c.id,
+      body: c.body,
+      explanation: c.explanation,
+      isCorrect: c.is_correct,
+    })),
+    status: row.disabled_at ? 'disabled' : 'active',
+    disabledReason: row.disabled_reason,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 const SUBJECT_COLUMNS = 'id, name, created_at';
 const KEYWORD_COLUMNS = 'id, subject_id, parent_id, name, sort_order';
+const QUESTION_COLUMNS =
+  'id, subject_id, kind, stem, explanation, disabled_at, disabled_reason, deleted_at, created_at, updated_at';
+const CHOICE_COLUMNS = 'id, body, explanation, is_correct, position';
 
 // ============================================================
 // 科目
@@ -207,4 +292,79 @@ export async function deleteKeyword(id: string): Promise<KeywordDeletionImpact> 
   const { data, error } = await supabase.rpc('delete_keyword', { p_keyword_id: id });
   throwIfError('キーワードの削除', error);
   return toKeywordDeletionImpact(data as KeywordDeletionImpactRow | null);
+}
+
+// ============================================================
+// 問題
+// ============================================================
+
+// 絞り込み条件で検索し、filter.page のページ（1ページ50件）と全体の件数を返す（7.1、7.4）
+export async function searchQuestions(
+  subjectId: string,
+  filter: QuestionFilter,
+): Promise<{ items: QuestionListItem[]; total: number }> {
+  const from = (filter.page - 1) * QUESTION_PAGE_SIZE;
+  const { data, error, count } = await supabase
+    .rpc('search_questions', toSearchArgs(subjectId, filter), { count: 'exact' })
+    .range(from, from + QUESTION_PAGE_SIZE - 1);
+  throwIfError('問題の検索', error);
+  return {
+    items: ((data ?? []) as QuestionListRow[]).map(toQuestionListItem),
+    total: count ?? 0,
+  };
+}
+
+// 問題、有効な選択肢（表示順）、紐づけを並列で取得する。削除済み・存在しない問題は null
+export async function getQuestion(id: string): Promise<Question | null> {
+  const [question, choices, links] = await Promise.all([
+    supabase.from('questions').select(QUESTION_COLUMNS).eq('id', id).maybeSingle(),
+    supabase
+      .from('choices')
+      .select(CHOICE_COLUMNS)
+      .eq('question_id', id)
+      .is('removed_at', null)
+      .order('position'),
+    supabase.from('question_keywords').select('keyword_id').eq('question_id', id),
+  ]);
+  throwIfError('問題の取得', question.error);
+  throwIfError('問題の取得', choices.error);
+  throwIfError('問題の取得', links.error);
+  const row = question.data as QuestionRow | null;
+  if (!row || row.deleted_at) return null;
+  return toQuestion(
+    row,
+    (choices.data ?? []) as ChoiceRow[],
+    ((links.data ?? []) as { keyword_id: string }[]).map((l) => l.keyword_id),
+  );
+}
+
+// 問題・選択肢・紐づけを1トランザクションで保存し、問題の ID を返す（4.6）
+export async function saveQuestion(input: QuestionInput): Promise<string> {
+  const { data, error } = await supabase.rpc('save_question', { p: input });
+  throwIfError('問題の保存', error);
+  return data as string;
+}
+
+// 無効化（理由は任意）と有効化（6.1、6.2）
+export async function setQuestionDisabled(
+  id: string,
+  disabled: boolean,
+  reason?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('set_question_disabled', {
+    p_question_id: id,
+    p_disabled: disabled,
+    p_reason: disabled ? (reason ?? null) : null,
+  });
+  throwIfError(disabled ? '問題の無効化' : '問題の有効化', error);
+}
+
+// 論理削除（行は残し deleted_at を設定する）（6.3）
+export async function deleteQuestion(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('questions')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .is('deleted_at', null);
+  throwIfError('問題の削除', error);
 }
