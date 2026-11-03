@@ -9,7 +9,7 @@
   - ローカル DB で、途中のキーワードの範囲では配下の問題だけ、既定では無効の問題なし、外された選択肢と解消済みのフラグなしの結果が SQL で返る
   - _Requirements: 1.3, 1.4, 1.5, 1.6, 1.7, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 10.7_
 
-- [ ] 1.2 取込を原子的に適用する RPC を作る
+- [x] 1.2 取込を原子的に適用する RPC を作る
   - 先頭で、期待する状態として渡されたキーワード・問題の行を固定し、更新日時の不一致・消失・削除済みがあれば `stale_preview` で何も反映せず中止する
   - キーワードの追加（親が先の順、一時キーの解決）、退避名を経由する2段階の改名、上流の移動 RPC による移動を行う
   - 上流の問題保存 RPC で修正（ID 不変）と新規作成（新しい ID を一時キーに対応づけ）を、上流の無効化 RPC で無効化を行う
@@ -176,3 +176,4 @@
 
 - 1.1: export の p_filter のキーは flag / flagTypes / correctRateMin / correctRateMax / attemptMin / attemptMax / attempted / includeDisabled（2.1 の toExportFilter はこの名前で出す）。無効の問題は question_stats に行がないため集計値は 0・null（design どおり。4.2 の SKILL.md に一言添える）。
 - 共通: 部分木での絞り込みは DB 側で行い、ID 一覧をクライアントへ返さない（API 経由は 1,000 行で切り捨て）。日時は Date.parse で比べる。タスク完了時の報告の STATUS は READY_FOR_REVIEW 等の決まった値にする。
+- 1.2: questionUpdates は { input }（input.id 必須）。keywordMoves は配列順に1件ずつ move_keyword するので、2.4 は各段階で循環しない順に並べる。keyword_not_found / question_not_found は 2.5 の toExchangeErrorMessage で汎用メッセージに落ちる。正解1つの検査はコミット時に P0001 one_correct_required。

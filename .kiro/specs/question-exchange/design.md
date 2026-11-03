@@ -380,6 +380,8 @@ sequenceDiagram
 | `stale_preview` | expected の行の `updated_at` 不一致、または行の消失・削除済み |
 | `subject_not_found` | 科目が存在しない・削除済み |
 | `temp_key_unresolved` | 解決できない一時キー（クライアント検証の漏れ） |
+| `keyword_not_found` | 改名対象のキーワードが存在しない、または別の科目に属する |
+| `question_not_found` | 修正の `input.id` がない |
 | 上流の例外（`keyword_cycle`、`one_correct_required`、`choice_not_in_question`、`keyword_subject_mismatch`、`23505` など） | そのまま伝播し、全体をロールバックする |
 
 処理順（6.1〜6.5、7.2、8.1）:
@@ -387,8 +389,8 @@ sequenceDiagram
 1. `p.subjectId` の科目を確認する。`p.expected.keywords[]` と `p.expected.questions[]`（`{ id, updatedAt }`）を `select … for update` で固定し、行がない、`deleted_at` がある（問題）、または `updated_at <> updatedAt` なら `stale_preview`
 2. `p.keywordAdds[]`（`{ tempKey, parentId, parentTempKey, name }`、親が先に来る順）を挿入し、`tempKey → id` の対応を `jsonb` に貯める。`sort_order` は null とし、上流のトリガーが末尾に設定する
 3. `p.keywordRenames[]`（`{ id, name }`）を、全件をいったん `name || ' ' || id` に更新してから最終名に更新する
-4. `p.keywordMoves[]`（`{ id, parentId, parentTempKey }`）ごとに `perform public.move_keyword(id, 解決した親)`
-5. `p.questionUpdates[]` と `p.questionCreates[]`（`{ tempKey, input }`。`input` は `QuestionInput` 相当の JSON。`keywordIds` の要素は既存 ID か `tmp:<tempKey>`）の一時キーを解決し、`public.save_question(input)` を呼ぶ。新規は返り値の ID を `tempKey` に対応づける
+4. `p.keywordMoves[]`（`{ id, parentId, parentTempKey }`）ごとに `perform public.move_keyword(id, 解決した親)`。配列の順に1件ずつ適用するため、各段階で循環が生じない順に並べる（2.4 の差分計算の責務）
+5. `p.questionUpdates[]`（`{ input }`、`input.id` 必須）と `p.questionCreates[]`（`{ tempKey, input }`。`input` は `QuestionInput` 相当の JSON。`keywordIds` の要素は既存 ID か `tmp:<tempKey>`）の一時キーを解決し、`public.save_question(input)` を呼ぶ。新規は返り値の ID を `tempKey` に対応づける
 6. `p.questionDisables[]`（`{ id, reason }`）ごとに `perform public.set_question_disabled(id, true, reason)`
 7. `v_resolved := quiz_private.resolve_question_flags(p.modifiedQuestionIds::uuid[])`（8.1、8.3）
 8. `{ keywordIds: {tempKey: id}, questionIds: {tempKey: id}, counts: {keywordsAdded, keywordsRenamed, keywordsMoved, questionsUpdated, questionsCreated, questionsDisabled}, resolvedFlagCount }` を返す
