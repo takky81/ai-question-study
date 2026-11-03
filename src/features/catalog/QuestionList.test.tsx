@@ -1,5 +1,5 @@
 // 問題一覧: 階層パス、件数とページ送り、0件、エラーと再試行、URL の絞り込み、無効化・有効化・削除
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -37,8 +37,11 @@ function item(over: Partial<QuestionListItem> = {}): QuestionListItem {
 }
 
 let currentSearch = '';
+let currentState: unknown = null;
 function LocationProbe() {
-  currentSearch = useLocation().search;
+  const location = useLocation();
+  currentSearch = location.search;
+  currentState = location.state;
   return null;
 }
 
@@ -54,6 +57,7 @@ function renderList(initial = '/catalog/s1') {
 beforeEach(() => {
   vi.resetAllMocks();
   currentSearch = '';
+  currentState = null;
   m.listKeywords.mockResolvedValue(KEYWORDS);
   m.searchQuestions.mockResolvedValue({ items: [item()], total: 1 });
 });
@@ -219,5 +223,29 @@ describe('QuestionList', () => {
     const dialog = screen.getByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: '削除する' }));
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('問題の削除に失敗しました: x');
+  });
+
+  it('連続した条件変更は互いに上書きせず、すべて URL に残る', async () => {
+    renderList('/catalog/s1?page=3');
+    await screen.findByText('3ウェイハンドシェイクを行うプロトコルは？');
+    act(() => {
+      fireEvent.change(screen.getByLabelText('種別'), { target: { value: 'feature' } });
+      fireEvent.change(screen.getByLabelText('状態'), { target: { value: 'disabled' } });
+    });
+    await waitFor(() => expect(currentSearch).toBe('?kind=feature&status=disabled'));
+  });
+
+  it('編集・作成リンクは一覧の条件を遷移の状態として渡す', async () => {
+    const user = userEvent.setup();
+    renderList('/catalog/s1?kind=feature&page=2');
+    await user.click(await screen.findByRole('link', { name: /を編集/ }));
+    expect(currentState).toEqual({ listSearch: '?kind=feature&page=2' });
+  });
+
+  it('作成リンクも一覧の条件を遷移の状態として渡す', async () => {
+    const user = userEvent.setup();
+    renderList('/catalog/s1?status=active');
+    await user.click(await screen.findByRole('link', { name: '問題を作成' }));
+    expect(currentState).toEqual({ listSearch: '?status=active' });
   });
 });

@@ -6,8 +6,8 @@ type Props = {
   filter: QuestionFilter;
   /** 選択中のキーワードの階層パス（キーワード未指定なら null） */
   keywordLabel: string | null;
-  /** 条件を変えたときに呼ぶ。ページは呼び出し側で1に戻す */
-  onChange: (next: QuestionFilter) => void;
+  /** 条件を変えたときに変更した項目だけを渡す。ページは呼び出し側で1に戻す */
+  onChange: (patch: Partial<QuestionFilter>) => void;
 };
 
 const FIELD = 'tap-target focus-ring min-w-0 rounded border border-border bg-bg px-2';
@@ -25,7 +25,7 @@ export function QuestionFilters({ filter, keywordLabel, onChange }: Props): Reac
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    onChange({ ...filter, text: text.trim() });
+    onChange({ text: text.trim() });
   }
 
   return (
@@ -42,7 +42,7 @@ export function QuestionFilters({ filter, keywordLabel, onChange }: Props): Reac
           <button
             type="button"
             aria-label="キーワードの指定を解除"
-            onClick={() => onChange({ ...filter, keywordId: null })}
+            onClick={() => onChange({ keywordId: null })}
             className="tap-target focus-ring rounded border border-border px-3"
           >
             解除
@@ -54,7 +54,7 @@ export function QuestionFilters({ filter, keywordLabel, onChange }: Props): Reac
         <select
           id={`${id}-kind`}
           value={filter.kind ?? ''}
-          onChange={(e) => onChange({ ...filter, kind: (e.target.value || null) as QuestionKind | null })}
+          onChange={(e) => onChange({ kind: (e.target.value || null) as QuestionKind | null })}
           className={FIELD}
         >
           <option value="">すべて</option>
@@ -68,7 +68,7 @@ export function QuestionFilters({ filter, keywordLabel, onChange }: Props): Reac
           id={`${id}-status`}
           value={filter.status ?? ''}
           onChange={(e) =>
-            onChange({ ...filter, status: (e.target.value || null) as QuestionStatus | null })
+            onChange({ status: (e.target.value || null) as QuestionStatus | null })
           }
           className={FIELD}
         >

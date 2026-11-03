@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useId, useMemo, useState, type ReactElement } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactElement } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { keywordPath } from '../../lib/keywordTree';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
@@ -39,7 +39,14 @@ export function QuestionList({ subjectId }: Props): ReactElement {
   const headingId = useId();
   const reasonId = useId();
   const [searchParams, setSearchParams] = useSearchParams();
+  // 編集画面から同じ条件の一覧へ戻れるよう、現在の条件を遷移の状態で渡す（7.3）
+  const linkState = { listSearch: useLocation().search };
   const filter = useMemo(() => parseFilter(searchParams), [searchParams]);
+  // 描画を待たずに続く変更でも直前の変更を土台にする（関数形式の setSearchParams は描画時の値を渡すため）
+  const latestParams = useRef(searchParams);
+  useEffect(() => {
+    latestParams.current = searchParams;
+  }, [searchParams]);
 
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [result, setResult] = useState<{ items: QuestionListItem[]; total: number } | null>(null);
@@ -71,13 +78,16 @@ export function QuestionList({ subjectId }: Props): ReactElement {
     [keywords],
   );
 
-  function updateFilter(next: QuestionFilter) {
-    setSearchParams(toSearchParams(next));
+  // 連続した変更が上書きし合わないよう、最新の URL の条件へ差分を重ねる
+  function updateFilter(patch: Partial<QuestionFilter>) {
+    const next = toSearchParams({ ...parseFilter(latestParams.current), ...patch });
+    latestParams.current = next;
+    setSearchParams(next);
   }
 
-  function onFilterChange(next: QuestionFilter) {
+  function onFilterChange(patch: Partial<QuestionFilter>) {
     setError(null);
-    updateFilter({ ...next, page: 1 });
+    updateFilter({ ...patch, page: 1 });
   }
 
   // 処理中の二重実行を防ぎ、失敗は日本語のエラーとして表示する
@@ -100,7 +110,7 @@ export function QuestionList({ subjectId }: Props): ReactElement {
   // 範囲外のページを要求しないよう前のページへ移る（移動で再取得される）
   async function refreshAfterChange() {
     if ((result?.items.length ?? 0) <= 1 && filter.page > 1) {
-      updateFilter({ ...filter, page: filter.page - 1 });
+      updateFilter({ page: filter.page - 1 });
     } else {
       await reload();
     }
@@ -141,6 +151,7 @@ export function QuestionList({ subjectId }: Props): ReactElement {
         </h2>
         <Link
           to={`/catalog/${subjectId}/questions/new`}
+          state={linkState}
           className="tap-target focus-ring flex items-center rounded border border-primary bg-primary px-4 font-bold text-bg"
         >
           問題を作成
@@ -168,7 +179,7 @@ export function QuestionList({ subjectId }: Props): ReactElement {
           {filter.page > 1 && (
             <button
               type="button"
-              onClick={() => updateFilter({ ...filter, page: 1 })}
+              onClick={() => updateFilter({ page: 1 })}
               className="tap-target focus-ring rounded border border-border px-3 text-text"
             >
               最初のページへ
@@ -212,6 +223,7 @@ export function QuestionList({ subjectId }: Props): ReactElement {
                     <div className="flex flex-wrap gap-2">
                       <Link
                         to={`/catalog/${subjectId}/questions/${q.id}`}
+                        state={linkState}
                         aria-label={`「${head}」を編集`}
                         className="tap-target focus-ring flex items-center rounded border border-border px-3"
                       >
@@ -263,7 +275,7 @@ export function QuestionList({ subjectId }: Props): ReactElement {
             <button
               type="button"
               disabled={filter.page <= 1}
-              onClick={() => updateFilter({ ...filter, page: filter.page - 1 })}
+              onClick={() => updateFilter({ page: filter.page - 1 })}
               className="tap-target focus-ring rounded border border-border px-3 disabled:opacity-50"
             >
               前へ
@@ -274,7 +286,7 @@ export function QuestionList({ subjectId }: Props): ReactElement {
             <button
               type="button"
               disabled={filter.page >= pageCount}
-              onClick={() => updateFilter({ ...filter, page: filter.page + 1 })}
+              onClick={() => updateFilter({ page: filter.page + 1 })}
               className="tap-target focus-ring rounded border border-border px-3 disabled:opacity-50"
             >
               次へ

@@ -51,7 +51,7 @@ function question(over: Partial<Question> = {}): Question {
   };
 }
 
-function renderAt(path: string) {
+function renderAt(path: string | { pathname: string; state?: unknown }) {
   const router = createMemoryRouter(
     [
       { path: '/catalog/:subjectId', element: <p>一覧画面</p> },
@@ -199,5 +199,68 @@ describe('QuestionEditPage', () => {
     btn.click();
     await waitFor(() => expect(m.saveQuestion).toHaveBeenCalledTimes(1));
     expect(m.saveQuestion).toHaveBeenCalledTimes(1);
+  });
+
+  it('一覧から渡された条件付きで「問題一覧へ戻る」を表示する', async () => {
+    renderAt({
+      pathname: '/catalog/11111111-1111-4111-8111-111111111111/questions/33333333-3333-4333-8333-333333333333',
+      state: { listSearch: '?kind=keyword&status=active' },
+    });
+    expect(await screen.findByRole('link', { name: '問題一覧へ戻る' })).toHaveAttribute(
+      'href',
+      '/catalog/11111111-1111-4111-8111-111111111111?kind=keyword&status=active',
+    );
+  });
+
+  it('見つからない場合の導線も一覧の条件を保つ', async () => {
+    m.getQuestion.mockResolvedValue(null);
+    renderAt({
+      pathname: '/catalog/11111111-1111-4111-8111-111111111111/questions/44444444-4444-4444-8444-444444444444',
+      state: { listSearch: '?page=2' },
+    });
+    expect(await screen.findByRole('link', { name: '問題一覧へ戻る' })).toHaveAttribute(
+      'href',
+      '/catalog/11111111-1111-4111-8111-111111111111?page=2',
+    );
+  });
+
+  it('条件が ? で始まらない状態は無視する', async () => {
+    renderAt({
+      pathname: '/catalog/11111111-1111-4111-8111-111111111111/questions/33333333-3333-4333-8333-333333333333',
+      state: { listSearch: '//evil' },
+    });
+    expect(await screen.findByRole('link', { name: '問題一覧へ戻る' })).toHaveAttribute(
+      'href',
+      '/catalog/11111111-1111-4111-8111-111111111111',
+    );
+  });
+
+  it('新規保存後の編集 URL への置き換えでも一覧の条件を保つ', async () => {
+    const user = userEvent.setup();
+    m.saveQuestion.mockResolvedValue('55555555-5555-4555-8555-555555555555');
+    const router = renderAt({
+      pathname: '/catalog/11111111-1111-4111-8111-111111111111/questions/new',
+      state: { listSearch: '?kind=feature' },
+    });
+    await user.click(await screen.findByLabelText('特徴などを答える問題'));
+    await user.type(screen.getByLabelText('問題文'), '問');
+    await user.type(screen.getByLabelText('問題の解説'), '解');
+    const bodies = screen.getAllByLabelText(/選択肢 \d の本文/);
+    const exps = screen.getAllByLabelText(/選択肢 \d の解説/);
+    for (let i = 0; i < bodies.length; i++) {
+      await user.type(bodies[i]!, `本文${i}`);
+      await user.type(exps[i]!, `解説${i}`);
+    }
+    await user.click(screen.getByLabelText('選択肢 1 を正解にする'));
+    await user.click(screen.getByRole('checkbox', { name: /TCP/ }));
+    await user.click(screen.getByRole('button', { name: '保存' }));
+    const confirm = screen.queryByRole('button', { name: '警告を確認して保存' });
+    if (confirm) await user.click(confirm);
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(
+        '/catalog/11111111-1111-4111-8111-111111111111/questions/55555555-5555-4555-8555-555555555555',
+      ),
+    );
+    expect(router.state.location.state).toEqual({ listSearch: '?kind=feature' });
   });
 });

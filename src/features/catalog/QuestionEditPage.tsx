@@ -1,7 +1,7 @@
 // 問題の作成・編集画面: 入力ごとの検証、欄ごとのエラー表示、警告の確認後保存、保存中の無効化、
 // 失敗時の入力保持、見つからない場合の導線、未保存変更の破棄確認（4.4、4.6、4.7、4.8、5.8、5.9、9.6）。
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactElement } from 'react';
-import { Link, useBlocker, useNavigate, useParams } from 'react-router';
+import { Link, useBlocker, useLocation, useNavigate, useParams } from 'react-router';
 
 import { getQuestion, listKeywords, saveQuestion } from './api';
 import { ChoiceEditor } from './ChoiceEditor';
@@ -39,11 +39,19 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+// 一覧から渡された絞り込み条件（?〜）だけを受け付ける（7.3）
+function listSearchOf(state: unknown): string {
+  const s = (state as { listSearch?: unknown } | null)?.listSearch;
+  return typeof s === 'string' && s.startsWith('?') ? s : '';
+}
+
 export function QuestionEditPage(): ReactElement {
   const { subjectId = '', questionId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const baseId = useId();
-  const listPath = `/catalog/${subjectId}`;
+  // 一覧の絞り込み条件を保ったまま戻る（7.3）
+  const listPath = `/catalog/${subjectId}${listSearchOf(location.state)}`;
 
   const [load, setLoad] = useState<LoadState>({ status: 'loading' });
   const [attempted, setAttempted] = useState(false);
@@ -210,7 +218,7 @@ export function QuestionEditPage(): ReactElement {
       setLoad((s) => (s.status === 'ready' ? { ...s, original: saved, draft: saved } : s));
       setAttempted(false);
       setConfirmWarnings(false);
-      if (draft.id === null) navigate(`/catalog/${subjectId}/questions/${id}`, { replace: true });
+      if (draft.id === null) navigate(`/catalog/${subjectId}/questions/${id}`, { replace: true, state: location.state });
     } catch (e) {
       // 入力は保持したまま再試行できる（4.7）
       setSaveError(errorMessage(e));

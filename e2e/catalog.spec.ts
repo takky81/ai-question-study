@@ -923,8 +923,8 @@ test.describe('一覧・ページング・レイアウト・アクセシビリ�
     await expect(totalText(page)).toHaveText(`${countWhere(leafKeywordActive)} 件`);
     await editLinks(page).first().click();
     await expect(page.getByRole('heading', { level: 1, name: '問題の編集' })).toBeVisible();
-    // ブラウザの戻る操作で同じ条件の一覧に戻る（条件は URL に残る）
-    await page.goBack();
+    // 「問題一覧へ戻る」で同じ条件の一覧に戻る（条件は URL に残る）
+    await page.getByRole('link', { name: '問題一覧へ戻る' }).click();
     await expect.poll(() => new URL(page.url()).search).toBe(`?keyword=${kw.leaf}&kind=keyword&status=active`);
     await showTab(page, '問題');
     await expect(totalText(page)).toHaveText(`${countWhere(leafKeywordActive)} 件`);

@@ -191,3 +191,4 @@
 - 6.1: keyword_subtree_ids は API 経由だと max_rows=1000 で切り捨てられる（design.md の下流向け注意に記載）。E2E は .range でページングして集合比較している。
 - 6.2: e2e/catalog.spec.ts はファイル単位の beforeEach で desktop 以外をスキップし、db 準備も desktop のみ。6.4 でモバイル幅の describe を足すときは、スキップを各 describe へ移すこと。
 - 6.4: e2e/catalog.spec.ts は describe ごとに desktopOnly() でスキップし、データ名は ${RUN}-${project} の PREFIX で分けて後片付けする。
+- 6.4 後の修正: 「問題一覧へ戻る」は一覧からの router state.listSearch（? で始まるものだけ）で絞り込みを保つ。QuestionList は latestParams ref に差分を重ねて連続変更の上書きを防ぐ（CatalogPage の onSelect は描画時の params のまま。実害は低い）。
