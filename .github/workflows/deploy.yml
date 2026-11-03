@@ -1,0 +1,73 @@
+# GitHub Pages への自動デプロイ: main への push で CI が成功完了した場合だけ配信する。
+# CI が失敗した場合、または main 以外・push 以外（pull request など）の実行では配信ジョブを実行しない。
+#
+# デプロイ前の確認項目（初回デプロイ前に手動で確認する）:
+#   1. Supabase Cloud の Authentication 設定で新規登録（Allow new users to sign up）が無効になっていること
+#   2. Supabase Cloud に所有者アカウントが作成済みであること（アプリには登録画面がない）
+#   3. repository variables に VITE_SUPABASE_URL と VITE_SUPABASE_PUBLISHABLE_KEY が設定されていること
+#   4. リポジトリ設定の Pages の Source が「GitHub Actions」になっていること
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+# 必要最小限の権限: チェックアウトの読み取り、Pages への書き込み、ID トークン
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 配信は同時に 1 つだけ。進行中の配信は取り消さない
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # CI が成功し、このリポジトリの main への push による実行である場合だけ配信する
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      # 公開前提の接続設定だけを渡す（service_role などの管理者キーは使わない）
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      # CI が検査したコミットそのものを取得する
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 依存関係の導入
+        run: npm ci
+
+      # base は GITHUB_REPOSITORY から /<リポジトリ名>/ になる
+      - name: サブパス用の本番ビルド
+        run: npm run build
+
+      - name: 成果物の検査
+        run: node scripts/check-dist.mjs
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: GitHub Pages へ配信
+        id: deployment
+        uses: actions/deploy-pages@v4
