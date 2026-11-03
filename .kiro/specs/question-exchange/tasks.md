@@ -181,5 +181,5 @@
 - 1.4: seed は「E2E 交換テスト」c0000000-0000-4000-8000-000000000001（d001〜d008、解答・フラグ付き）と「E2E 交換大量データ」…0002（1,200 問）。6.x の取込 E2E は seed を書き換えないよう、実行ごとに接頭辞付きの自前データを作ること（出力・集計の E2E は seed を読むだけなら可）。
 - 2.1: keywordId は p_filter に含めない。2.6 の API は c.keywordId を RPC の p_keyword_id に別で渡すこと。toSnapshot は flag≠types でも flagTypes を残す（軽微）。
 - 2.2: ExportRows と行型（camelCase）は exportBuild.ts に置く。2.6 の api.ts は snake_case の RPC 行をこの型に変換する。ファイル名の日時はローカル時刻、exportedAt は UTC の ISO。
-- 2.3: validateImport は移動後の最終状態だけで循環を判定する。2.4/2.5 は keywordMoves を移動後の深さが浅い順に並べ、途中で循環が生じないようにし、親の入れ替え（A/B）のテストを付けること。一時キーの仮 ID は tempKeywordId（tmp:<tempKey>）を使う。
+- 2.3: validateImport は移動後の最終状態だけで循環を判定する。2.4/2.5 は keywordMoves を移動後の深さが浅い順に並べ、途中で循環が生じないようにし、親の入れ替え（A/B）のテストを付けること。一時キーの仮 ID は tempKeywordId（`tmp:<tempKey>`）を使う。
 - 2.4: ImportSnapshot.keywords は updatedAt を持つ型に広げる（design.md 修正済み）。2.5 で importValidate.ts の型を (Keyword & { updatedAt: string })[] にし diff.ts のキャストを外す、buildApplyPayload は expected.keywords に updatedAt を必須で入れる。2.6 の loadImportSnapshot は keywords の updated_at を取得する。
