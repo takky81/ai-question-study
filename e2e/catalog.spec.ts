@@ -332,3 +332,322 @@ test.describe('科目・キーワード操作', () => {
     });
   });
 });
+
+// ============================================================
+// 問題編集・状態操作（1.4、4.4〜4.8、5.8、5.9、6.1〜6.3、6.6、9.5、9.6）
+// ============================================================
+
+test.describe('問題編集・状態操作', () => {
+  let subjectId: string;
+  let kw: string;
+
+  test.beforeAll(async ({}, testInfo) => {
+    if (testInfo.project.name !== 'desktop') return;
+    subjectId = await seedSubject('問題科目');
+    kw = await seedKeyword(subjectId, '親語');
+    await seedKeyword(subjectId, '子語', kw);
+  });
+
+  const SAVE_RPC = '**/rest/v1/rpc/save_question';
+  const bodies = (page: Page) => page.getByRole('textbox', { name: /^選択肢 \d+ の本文$/ });
+  const saveButton = (page: Page) => page.getByRole('button', { name: /^(保存|警告を確認して保存|保存中…)$/ });
+  const stemBox = (page: Page) => page.getByRole('textbox', { name: '問題文', exact: true });
+  const choiceBox = (page: Page, n: number, part: '本文' | '解説') =>
+    page.getByRole('textbox', { name: `選択肢 ${n} の${part}`, exact: true });
+
+  async function questionCount(): Promise<number> {
+    const { count, error } = await db
+      .from('questions')
+      .select('id', { count: 'exact', head: true })
+      .eq('subject_id', subjectId);
+    if (error) throw error;
+    return count ?? 0;
+  }
+
+  test('新規作成: 種別ごとの空欄数、エラー時は保存しない、警告は確認後に保存、正解の色と印（4.4、4.6、5.8、5.9、9.5）', async ({
+    page,
+  }) => {
+    const before = await questionCount();
+    let requests = 0;
+    page.on('request', (r) => {
+      if (r.url().includes('/rest/v1/rpc/save_question')) requests++;
+    });
+    await page.goto(`/catalog/${subjectId}/questions/new`);
+    await expect(page.getByRole('heading', { level: 1, name: '新しい問題' })).toBeVisible();
+    // キーワード問題は6個、特徴問題は4個の空欄。「わからない」はない（4.4、4.9）
+    await expect(bodies(page)).toHaveCount(6);
+    await page.getByRole('radio', { name: '特徴などを答える問題' }).check();
+    await expect(bodies(page)).toHaveCount(4);
+    await page.getByRole('radio', { name: 'キーワードを答える問題' }).check();
+    await expect(bodies(page)).toHaveCount(6);
+    await expect(page.getByText('わからない')).toHaveCount(0);
+
+    // エラーがあれば保存せず、欄の近くに説明を出す（5.8）
+    await saveButton(page).click();
+    await expect(page.getByText('問題文を入力してください。')).toBeVisible();
+    await expect(page.getByText('キーワードを1つ以上紐づけてください。')).toBeVisible();
+    await expect(page.getByText(/エラーが \d+ 件あります/)).toBeVisible();
+    await expect(stemBox(page)).toHaveAttribute('aria-invalid', 'true');
+    const stemDesc = await stemBox(page).getAttribute('aria-describedby');
+    expect(stemDesc).toBeTruthy();
+    await expect(page.locator(`[id="${stemDesc}"]`)).toContainText('問題文を入力してください。');
+    expect(requests).toBe(0);
+    expect(await questionCount()).toBe(before);
+
+    // 選択肢を4個に減らして埋める（原則6個より少ないので警告だけになる）
+    await page.getByRole('button', { name: '選択肢 6 を削除' }).click();
+    await page.getByRole('button', { name: '選択肢 5 を削除' }).click();
+    await expect(bodies(page)).toHaveCount(4);
+    await stemBox(page).fill('新規の問題文');
+    await page.getByRole('textbox', { name: '問題の解説', exact: true }).fill('新規の解説');
+    await page.getByRole('checkbox', { name: '子語' }).check();
+    await expect(page.getByRole('list', { name: '選択済みのキーワード' })).toHaveText('親語 / 子語');
+    for (let i = 1; i <= 4; i++) {
+      await choiceBox(page, i, '本文').fill(`新規${i}`);
+      await choiceBox(page, i, '解説').fill(`新規${i} の解説`);
+    }
+    await page.getByRole('radio', { name: '選択肢 2 を正解にする' }).check();
+
+    // 正解の色と印（9.5）: 正解の選択肢だけ mark-correct と ○、警告色は使わない
+    const items = page.getByRole('group', { name: '選択肢' }).locator('ol > li');
+    await expect(items.nth(1)).toHaveClass(/mark-correct/);
+    await expect(items.nth(1)).toContainText('○');
+    await expect(items.nth(0)).not.toHaveClass(/mark-correct/);
+    await expect(items.nth(0)).not.toContainText('○');
+    const colors = await items.nth(1).evaluate((el) => {
+      const probe = (cls: string) => {
+        const s = document.createElement('span');
+        s.className = cls;
+        document.body.append(s);
+        const c = getComputedStyle(s).color;
+        s.remove();
+        return c;
+      };
+      const all = [el, ...Array.from(el.querySelectorAll('*'))];
+      return {
+        color: getComputedStyle(el).color,
+        correct: probe('mark-correct'),
+        warn: probe('text-warn'),
+        warnClasses: all.filter((e) => /\bwarn\b|-warn\b/.test(e.getAttribute('class') ?? '')).length,
+      };
+    });
+    expect(colors.color).toBe(colors.correct);
+    expect(colors.color).not.toBe(colors.warn);
+    expect(colors.warnClasses).toBe(0);
+
+    // 警告だけなら一覧を出し、確認後に保存する（5.9）
+    await saveButton(page).click();
+    await expect(page.getByText('警告があります。内容を確認してください。')).toBeVisible();
+    await expect(page.getByText(/選択肢は原則 6 個です（現在 4 個）/).first()).toBeVisible();
+    await expect(saveButton(page)).toHaveText('警告を確認して保存');
+    expect(requests).toBe(0);
+    expect(await questionCount()).toBe(before);
+    await saveButton(page).click();
+
+    await expect(page).toHaveURL(new RegExp(`/catalog/${subjectId}/questions/[0-9a-f-]{36}$`));
+    await expect(page.getByRole('heading', { level: 1, name: '問題の編集' })).toBeVisible();
+    await expect(page.getByText('保存済み')).toBeVisible();
+    expect(requests).toBe(1);
+
+    // 問題・選択肢・紐づけが一括で保存されている（4.6）
+    const id = page.url().split('/').pop()!;
+    const q = await db.from('questions').select('stem, kind').eq('id', id).single();
+    expect(q.data).toEqual({ stem: '新規の問題文', kind: 'keyword' });
+    const cs = await db.from('choices').select('body, is_correct').eq('question_id', id).is('removed_at', null).order('position');
+    expect(cs.data?.map((c) => [c.body, c.is_correct])).toEqual([
+      ['新規1', false],
+      ['新規2', true],
+      ['新規3', false],
+      ['新規4', false],
+    ]);
+    const links = await db.from('question_keywords').select('keyword_id').eq('question_id', id);
+    expect(links.data?.map((r) => r.keyword_id)).toEqual([await keywordIdByName(subjectId, '子語')]);
+  });
+
+  test('再編集で問題と選択肢の ID が変わらず、並べ替えが保存される（1.4、4.5、4.6）', async ({ page }) => {
+    const id = await seedQuestion(subjectId, [kw], '再編集の問題');
+    const before = await db.from('choices').select('id, body').eq('question_id', id).is('removed_at', null).order('position');
+    const ids = new Map(before.data?.map((c) => [c.body as string, c.id as string]));
+
+    await page.goto(`/catalog/${subjectId}/questions/${id}`);
+    await expect(stemBox(page)).toHaveValue('再編集の問題');
+    await expect(bodies(page)).toHaveCount(2);
+    await stemBox(page).fill('再編集後の問題');
+    await page.getByRole('button', { name: '選択肢 2 を上へ' }).click();
+    await expect(choiceBox(page, 1, '本文')).toHaveValue('不正解');
+    await saveButton(page).click();
+    // 2個（原則6個）なので警告を確認して保存する
+    await expect(saveButton(page)).toHaveText('警告を確認して保存');
+    await saveButton(page).click();
+    await expect(page.getByText('保存済み')).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/questions/${id}$`));
+
+    const q = await db.from('questions').select('id, stem').eq('id', id).single();
+    expect(q.data).toEqual({ id, stem: '再編集後の問題' });
+    const after = await db.from('choices').select('id, body').eq('question_id', id).is('removed_at', null).order('position');
+    expect(after.data).toEqual([
+      { id: ids.get('不正解'), body: '不正解' },
+      { id: ids.get('正解'), body: '正解' },
+    ]);
+  });
+
+  test('保存失敗時は入力を保持して再試行でき、保存中は二重保存しない（4.7、4.8）', async ({ page }) => {
+    const id = await seedQuestion(subjectId, [kw], '失敗確認の問題');
+    await page.goto(`/catalog/${subjectId}/questions/${id}`);
+    await expect(stemBox(page)).toHaveValue('失敗確認の問題');
+    await stemBox(page).fill('失敗後も残る問題文');
+    await choiceBox(page, 1, '解説').fill('残る解説');
+
+    // 保存の RPC を失敗させる
+    let failed = 0;
+    await page.route(SAVE_RPC, async (route) => {
+      failed++;
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'XX000', message: 'e2e failure', details: null, hint: null }),
+      });
+    });
+    await saveButton(page).click();
+    await saveButton(page).click(); // 警告の確認
+    await expect(page.getByRole('alert')).toHaveText('問題の保存に失敗しました: e2e failure');
+    expect(failed).toBe(1);
+    await expect(stemBox(page)).toHaveValue('失敗後も残る問題文');
+    await expect(choiceBox(page, 1, '解説')).toHaveValue('残る解説');
+    await expect(saveButton(page)).toBeEnabled();
+    const unchanged = await db.from('questions').select('stem').eq('id', id).single();
+    expect(unchanged.data?.stem).toBe('失敗確認の問題');
+    await page.unroute(SAVE_RPC);
+
+    // 応答を遅らせ、保存中の連打でも要求が1回だけになることを確かめる
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    let delayed = 0;
+    await page.route(SAVE_RPC, async (route) => {
+      delayed++;
+      await gate;
+      await route.continue();
+    });
+    await saveButton(page).click(); // 再試行（警告は確認済みのまま）
+    await expect(saveButton(page)).toHaveText('保存中…');
+    await expect(saveButton(page)).toBeDisabled();
+    await saveButton(page).click({ force: true });
+    await saveButton(page).dispatchEvent('click');
+    expect(delayed).toBe(1);
+    release();
+    await expect(page.getByText('保存済み')).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    expect(delayed).toBe(1);
+    await page.unroute(SAVE_RPC);
+    const saved = await db.from('questions').select('stem').eq('id', id).single();
+    expect(saved.data?.stem).toBe('失敗後も残る問題文');
+    const cs = await db.from('choices').select('explanation').eq('question_id', id).is('removed_at', null).order('position');
+    expect(cs.data?.[0]?.explanation).toBe('残る解説');
+  });
+
+  test('未保存の変更があると画面内の遷移とブラウザの離脱で破棄を確認する（9.6）', async ({ page }) => {
+    const id = await seedQuestion(subjectId, [kw], '離脱確認の問題');
+    await page.goto(`/catalog/${subjectId}/questions/${id}`);
+    await expect(stemBox(page)).toHaveValue('離脱確認の問題');
+
+    // 変更がなければ確認なしで移動できる
+    await page.getByRole('link', { name: '問題一覧へ戻る' }).click();
+    await expect(page).toHaveURL(new RegExp(`/catalog/${subjectId}$`));
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await page.goto(`/catalog/${subjectId}/questions/${id}`);
+    await stemBox(page).fill('未保存の変更');
+
+    // 画面内の遷移: キャンセルで留まる
+    await page.getByRole('link', { name: '問題一覧へ戻る' }).click();
+    const dialog = page.getByRole('dialog', { name: '変更を破棄しますか' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'キャンセル' }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`/questions/${id}$`));
+    await expect(stemBox(page)).toHaveValue('未保存の変更');
+
+    // ブラウザの離脱: beforeunload の確認が出て、取り消せば留まる
+    const dialogEvent = page.waitForEvent('dialog');
+    await page.close({ runBeforeUnload: true });
+    const unload = await dialogEvent;
+    expect(unload.type()).toBe('beforeunload');
+    await unload.dismiss();
+    expect(page.isClosed()).toBe(false);
+    await expect(stemBox(page)).toHaveValue('未保存の変更');
+
+    // 画面内の遷移: 破棄すると保存せずに移動する
+    await page.getByRole('link', { name: '問題一覧へ戻る' }).click();
+    await dialog.getByRole('button', { name: '破棄して移動' }).click();
+    await expect(page).toHaveURL(new RegExp(`/catalog/${subjectId}$`));
+    const q = await db.from('questions').select('stem').eq('id', id).single();
+    expect(q.data?.stem).toBe('離脱確認の問題');
+  });
+
+  test('一覧から無効化（理由）・有効化・削除（確認と消失）ができる（6.1〜6.3、6.6）', async ({ page }) => {
+    const stem = '状態操作の問題';
+    const id = await seedQuestion(subjectId, [kw], stem);
+    await page.goto(`/catalog/${subjectId}`);
+    const row = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: `「${stem}」を編集` }) });
+    await expect(row).toContainText('有効');
+
+    // 無効化（理由つき）（6.1）
+    await page.getByRole('button', { name: `「${stem}」を無効化` }).click();
+    const disable = page.getByRole('dialog', { name: '問題を無効化' });
+    await disable.getByLabel('無効化の理由（任意）').fill('E2E の理由');
+    await disable.getByRole('button', { name: '無効にする' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: `「${stem}」を有効に戻す` })).toBeVisible();
+    await expect(row).toContainText('無効');
+    let r = await db.from('questions').select('disabled_at, disabled_reason').eq('id', id).single();
+    expect(r.data?.disabled_at).not.toBeNull();
+    expect(r.data?.disabled_reason).toBe('E2E の理由');
+
+    // 有効化で無効化の記録が消える（6.2）
+    await page.getByRole('button', { name: `「${stem}」を有効に戻す` }).click();
+    await expect(page.getByRole('button', { name: `「${stem}」を無効化` })).toBeVisible();
+    r = await db.from('questions').select('disabled_at, disabled_reason').eq('id', id).single();
+    expect(r.data).toEqual({ disabled_at: null, disabled_reason: null });
+
+    // 削除: 元に戻せない旨の確認（6.6）。キャンセルでは消えない
+    await page.getByRole('button', { name: `「${stem}」を削除` }).click();
+    const del = page.getByRole('dialog', { name: '問題を削除' });
+    await expect(del).toContainText('削除すると一覧から消え、元に戻せません。');
+    await del.getByRole('button', { name: 'キャンセル' }).click();
+    await expect(page.getByRole('link', { name: `「${stem}」を編集` })).toBeVisible();
+    await page.getByRole('button', { name: `「${stem}」を削除` }).click();
+    await del.getByRole('button', { name: '削除する' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: `「${stem}」を編集` })).toHaveCount(0);
+    const d = await db.from('questions').select('deleted_at').eq('id', id).single();
+    expect(d.data?.deleted_at).not.toBeNull();
+    await page.reload();
+    await expect(page.getByRole('link', { name: '問題を作成' })).toBeVisible();
+    await expect(page.getByText(/^\d+ 件$/)).toBeVisible();
+    await expect(page.getByRole('link', { name: `「${stem}」を編集` })).toHaveCount(0);
+
+    // 削除した問題は編集の対象からも外れる（6.3）
+    await page.goto(`/catalog/${subjectId}/questions/${id}`);
+    await expect(page.getByRole('heading', { level: 1, name: '問題が見つかりません' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '問題一覧へ戻る' })).toBeVisible();
+  });
+
+  test('紐づくキーワードがない問題は有効に戻せずエラーを表示する（6.2）', async ({ page }) => {
+    const lone = await seedKeyword(subjectId, '消える語');
+    const stem = '紐づけを失う問題';
+    const id = await seedQuestion(subjectId, [lone], stem);
+    // 唯一の紐づけ先を削除すると no_keyword で無効化される
+    const removed = await db.rpc('delete_keyword', { p_keyword_id: lone });
+    expect(removed.error).toBeNull();
+    const q = await db.from('questions').select('disabled_reason').eq('id', id).single();
+    expect(q.data?.disabled_reason).toBe('no_keyword');
+
+    await page.goto(`/catalog/${subjectId}`);
+    await page.getByRole('button', { name: `「${stem}」を有効に戻す` }).click();
+    await expect(page.getByRole('alert')).toHaveText('紐づくキーワードがないため有効にできません');
+    const after = await db.from('questions').select('disabled_at').eq('id', id).single();
+    expect(after.data?.disabled_at).not.toBeNull();
+  });
+});
