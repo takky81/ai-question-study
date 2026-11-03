@@ -2,7 +2,7 @@
 
 前提: 上流の app-foundation（ルート登録表、保護ルート、共通ページング、所有者の seed アカウント、ユニット／E2E の実行基盤）が実装済みであること。
 
-- [ ] 1. 基盤: カタログのスキーマと RPC
+- [x] 1. 基盤: カタログのスキーマと RPC
 
 - [x] 1.1 カタログのテーブル、制約、RLS、ビューの migration を作る
   - 科目・キーワード・問題・選択肢・問題とキーワードの紐づけの各テーブルを、所有者列（既定値は現在のユーザー）と作成時に割り当てる UUID 付きで定義する
@@ -26,7 +26,7 @@
   - _Depends: 1.1_
   - _Requirements: 1.4, 2.5, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10, 4.6, 6.1, 6.2, 7.2, 7.3, 7.5, 8.2, 8.3, 8.4_
 
-- [ ] 1.3 RLS 検証用の2人目のローカルアカウントを seed に追加する
+- [x] 1.3 RLS 検証用の2人目のローカルアカウントを seed に追加する
   - ローカル専用の別アカウントを、既存の所有者アカウントと同じ方式で追加する
   - 完了状態: DB リセット後に2人目のアカウントでログインでき、所有者のアカウントも引き続きログインできる
   - _Boundary: supabase/seed.sql（subject-catalog の節を追記のみ）_
@@ -181,3 +181,4 @@
 
 - 1.1: choices の RLS WITH CHECK は親の問題が自分のものであることも要求する（他人の question_id への挿入を防ぐ）。question_keywords の他人の行への紐づけは invoker 権限の `check_link_subject` が RLS 越しに防ぐため、この関数を security definer にしてはならない。「正解はちょうど1つ」は choices への書き込み時の遅延トリガーで検査するので、問題と選択肢は 1.2 の `save_question` で同一トランザクションに保存する
 - 1.2: questions / keywords の RLS WITH CHECK は参照先の科目が自分のものであることも要求する（外部キー検査は RLS を通らないため、1.2 の migration でポリシーを作り直した）。`save_question` は空の keywordIds を `no_keyword`、重複した選択肢 ID を `duplicate_choice_id` で拒否する。DB 挙動の確認用 SQL（rpc / cross など）は作業用の一時領域にあり、恒久的な検証は 6.1 の E2E で行う
+- 1.3: RLS 検証用の2人目のローカルアカウントは other@example.com / other-password-local（UUID 22222222-2222-4222-8222-222222222222、データなし）
