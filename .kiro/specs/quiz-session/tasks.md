@@ -61,7 +61,7 @@
   - _Boundary: stats.ts, range.ts_
   - _Requirements: 1.7, 2.7, 6.2, 6.3, 6.4, 10.6_
 
-- [ ] 2.4 セッション進行の状態遷移を作る
+- [x] 2.4 セッション進行の状態遷移を作る
   - 候補読込、問題読込、解答、記録成功・失敗、再試行、出題対象外のスキップ、次へ、読込失敗の各操作による状態遷移を実装する
   - 記録中は2回目の解答と次への移動を受け付けず、再試行では同じ冪等キーを使い、記録成功で成績・候補・解答済み集合・セッション集計を置き換え、候補がなくなれば終了にする
   - ユニットテストで、判定前後の表示状態、記録中の操作抑止、再試行の冪等キー維持、最後の問題での終了が通る
@@ -163,3 +163,4 @@
 - 2.1: DB の btrim は ASCII 空白のみ除去し、JS の trim は全角空白・改行も除去する。2.5 の api.ts は save_question_flags を呼ぶ前に必ず normalizeComment を適用すること。
 - 2.2: DB の timestamptz の JSON は小数秒の桁数が可変で、オフセットも異なり得るため、日時は文字列でなく Date.parse で比べる。
 - 2.3: 百分率は Math.round の整数。不正な keyword は範囲全体を null にする（範囲選択へ置換遷移）。UUID 正規表現は QuestionEditPage と重複しており、共通化は別タスクで検討。
+- 2.4: session.ts は設計外の nextQuestionId(state) を export（読込中に取得する問題 ID）。answered は読み込んだ選択肢の isCorrect で即時判定し、recordSucceeded で RPC の結果に置き換える。2.5 の API は QuizChoice.isCorrect を必ず渡すこと。
