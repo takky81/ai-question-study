@@ -310,12 +310,15 @@ stateDiagram-v2
 
 #### catalog_rpc migration
 
+- 外部キー検査は RLS を経由しないため、本 migration で `questions` と `keywords` のポリシーを作り直し、`WITH CHECK` に `exists (select 1 from public.subjects s where s.id = subject_id and s.owner_id = (select auth.uid()))` を加える（他人の科目への作成・付け替えを拒否、1.2）。
+- `save_question` は `keywordIds` が空なら `no_keyword`、同じ選択肢 ID の重複指定は `duplicate_choice_id` で拒否する。
+
 すべて `language plpgsql`（`keyword_subtree_ids` は `language sql stable`）、`security invoker`、`set search_path = ''`、スキーマ修飾付き。`authenticated` に `execute` を付与し、`anon` と `public` からは取り消す。
 
 | RPC | Request | Response | Errors（例外メッセージ） |
 | ----- | --------- | ---------- | -------------------------- |
-| `save_question(p jsonb)` | `QuestionInput` と同じ camelCase キーの JSON（`id`、`subjectId`、`kind`、`stem`、`explanation`、`keywordIds`、`choices`。`choices` の各要素は `ChoiceInput` と同じ `id`、`body`、`explanation`、`isCorrect`） | `uuid` | `question_not_found`、`choice_not_in_question`、`one_correct_required`、`keyword_subject_mismatch` |
-| `move_keyword(p_keyword_id uuid, p_new_parent_id uuid)` | 移動先 null は科目直下 | `void` | `keyword_cycle`、`keyword_subject_mismatch`、`duplicate_sibling` |
+| `save_question(p jsonb)` | `QuestionInput` と同じ camelCase キーの JSON（`id`、`subjectId`、`kind`、`stem`、`explanation`、`keywordIds`、`choices`。`choices` の各要素は `ChoiceInput` と同じ `id`、`body`、`explanation`、`isCorrect`） | `uuid` | `question_not_found`、`choice_not_in_question`、`duplicate_choice_id`、`no_keyword`、`one_correct_required`、`keyword_subject_mismatch` |
+| `move_keyword(p_keyword_id uuid, p_new_parent_id uuid)` | 移動先 null は科目直下 | `void` | `keyword_not_found`、`keyword_cycle`、`keyword_subject_mismatch`、`duplicate_sibling` |
 | `reorder_keywords(p_subject_id uuid, p_parent_id uuid, p_ordered_ids uuid[])` | 兄弟全件の新しい順序 | `void` | `sibling_set_mismatch` |
 | `preview_keyword_deletion(p_keyword_id uuid)` | — | `{ keyword_count, unlinked_question_count, disabled_question_count }` | — |
 | `delete_keyword(p_keyword_id uuid)` | — | 同上（実際の件数） | — |
@@ -327,7 +330,7 @@ stateDiagram-v2
 - `save_question`: `p.id` が null なら新規作成、ある場合は既存行を更新する（ID 不変、1.4）。選択肢は `id` 付きを更新、`id` なしを挿入、入力にない既存選択肢へ `removed_at = now()` を設定する。`position` の一時衝突を避けるため、先に対象の有効な選択肢の `position` を負値へ退避してから書き込む。紐づけは入力の集合に置き換える。`updated_at` を更新する（4.6）。
 - `move_keyword`: 移動先の兄弟の最大 `sort_order + 1` を設定する（3.6）。循環はトリガーで拒否される（3.7）。
 - `reorder_keywords`: `p_ordered_ids` が当該親の兄弟集合と一致しなければ拒否し、配列の順で `sort_order = 0..n-1` を設定する（3.5）。
-- `delete_keyword`: 部分木 ID を `keyword_subtree_ids` で集め、紐づけが部分木外に残らない未削除の問題を `disabled_at = now()`、`disabled_reason = 'no_keyword'` にしてから、ルートのキーワードを削除する（紐づけは cascade で消える）（3.9、3.10）。`preview_keyword_deletion` は同じ集計を変更なしで返す（3.8）。
+- `delete_keyword`: 部分木 ID を `keyword_subtree_ids` で集め、紐づけが部分木外に残らない未削除の問題を `disabled_at = now()`、`disabled_reason = 'no_keyword'` にしてから、ルートのキーワードを削除する（紐づけは cascade で消える）（3.9、3.10）。`preview_keyword_deletion` は同じ集計を変更なしで返す（3.8）。`unlinked_question_count` は部分木に紐づく未削除の問題数、`disabled_question_count` はそのうち新たに無効化される問題数（すでに無効の問題は数えず、理由も変えない）。
 - `delete_subject`: 科目に `deleted_at`、配下の未削除の問題に `deleted_at` を設定し、配下のキーワードを削除する（2.5）。
 - `set_question_disabled`: 無効化は `disabled_at = now()`、`disabled_reason = p_reason`（空なら null）。有効化は紐づけが0件なら `no_keyword` で拒否し、両列を null にする（6.1、6.2）。
 - `search_questions`: `deleted_at is null` かつ `subject_id = p_subject_id`。`p_keyword_id` があれば `keyword_subtree_ids` のいずれかに紐づく問題（`exists`）、`p_status` は `active`／`disabled`、`p_text` は問題文・解説・有効な選択肢の本文と解説への `ilike '%' || 語 || '%'`（`%`・`_` はエスケープ）。`order by created_at desc, id desc`（7.2、7.3、7.5）。返り値の複合型 `question_list_row` は `id, kind, stem, created_at, disabled_at, keyword_ids uuid[]`。

@@ -15,7 +15,7 @@
   - _Boundary: supabase/migrations/20261104000000_catalog_schema.sql_
   - _Requirements: 1.1, 1.2, 1.3, 2.3, 3.4, 4.1, 4.2, 4.3, 5.10, 6.4, 6.5_
 
-- [ ] 1.2 カタログの RPC と部分木関数の migration を作る
+- [x] 1.2 カタログの RPC と部分木関数の migration を作る
   - 自身を含む配下のキーワード ID を重複なく返す部分木関数を作る（存在しない ID は0行）
   - 問題・選択肢・紐づけを1トランザクションで作成・更新し、既存 ID を保ち、外された選択肢に除外日時を付け、表示順の一時衝突を避ける保存 RPC を作る
   - キーワードの移動（移動先の兄弟の末尾）、兄弟集合が一致する場合だけの並べ替え、削除の影響件数の事前集計、部分木の削除と紐づけ喪失時の無効化を行う RPC を作る
@@ -180,3 +180,4 @@
 ## Implementation Notes
 
 - 1.1: choices の RLS WITH CHECK は親の問題が自分のものであることも要求する（他人の question_id への挿入を防ぐ）。question_keywords の他人の行への紐づけは invoker 権限の `check_link_subject` が RLS 越しに防ぐため、この関数を security definer にしてはならない。「正解はちょうど1つ」は choices への書き込み時の遅延トリガーで検査するので、問題と選択肢は 1.2 の `save_question` で同一トランザクションに保存する
+- 1.2: questions / keywords の RLS WITH CHECK は参照先の科目が自分のものであることも要求する（外部キー検査は RLS を通らないため、1.2 の migration でポリシーを作り直した）。`save_question` は空の keywordIds を `no_keyword`、重複した選択肢 ID を `duplicate_choice_id` で拒否する。DB 挙動の確認用 SQL（rpc / cross など）は作業用の一時領域にあり、恒久的な検証は 6.1 の E2E で行う
