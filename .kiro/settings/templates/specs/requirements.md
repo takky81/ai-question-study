@@ -13,20 +13,20 @@
 
 ### Requirement 1: {{REQUIREMENT_AREA_1}}
 <!-- Requirement headings MUST include a leading numeric ID only (for example: "Requirement 1: ...", "1. Overview", "2 Feature: ..."). Alphabetic IDs like "Requirement A" are not allowed. -->
-**Objective:** As a {{ROLE}}, I want {{CAPABILITY}}, so that {{BENEFIT}}
+**Objective:** {{ROLE}}として、{{CAPABILITY}}したい。それにより{{BENEFIT}}。
 
 #### Acceptance Criteria
-1. When [event], the [system] shall [response/action]
-2. If [trigger], then the [system] shall [response/action]
-3. While [precondition], the [system] shall [response/action]
-4. Where [feature is included], the [system] shall [response/action]
-5. The [system] shall [response/action]
+1. [イベント]とき、[システム]は[応答]する
+2. [異常・望ましくない事象]場合、[システム]は[応答]する
+3. [前提状態]の間、[システム]は[応答]する
+4. [機能・構成]を含む場合、[システム]は[応答]する
+5. [システム]は[応答]する
 
 ### Requirement 2: {{REQUIREMENT_AREA_2}}
-**Objective:** As a {{ROLE}}, I want {{CAPABILITY}}, so that {{BENEFIT}}
+**Objective:** {{ROLE}}として、{{CAPABILITY}}したい。それにより{{BENEFIT}}。
 
 #### Acceptance Criteria
-1. When [event], the [system] shall [response/action]
-2. When [event] and [condition], the [system] shall [response/action]
+1. [イベント]とき、[システム]は[応答]する
+2. [イベント]かつ[追加条件]とき、[システム]は[応答]する
 
 <!-- Additional requirements follow the same pattern -->

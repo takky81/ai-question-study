@@ -40,7 +40,7 @@ Requirements should clarify the feature boundary in user- or operator-observable
 
 Before applying judgment, verify these mechanically:
 - **Numeric IDs present**: Every requirement heading has a numeric ID (1, 1.1, 2, etc.). Scan the draft for headings without IDs.
-- **Acceptance criteria exist**: Every requirement has at least one EARS-format acceptance criterion. Scan for requirements with no "When/If/While/Where" acceptance statements.
+- **Acceptance criteria exist**: Every requirement has at least one EARS-format acceptance criterion. Scan for requirements with no EARS-pattern acceptance statements (for ja: 「〜とき」「〜の間」「〜場合」「〜を含む場合」 or ubiquitous 「〜は〜する」).
 - **No implementation language**: Scan for technology-specific terms (database names, framework names, API patterns) that belong in design, not requirements. Flag any found.
 
 ## Review Loop

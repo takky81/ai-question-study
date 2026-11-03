@@ -34,8 +34,8 @@
 
 ## Specs (dependency order)
 
-- [ ] app-foundation -- プロジェクト雛形、Supabase 接続・認証、共通レイアウト・テーマ・正誤色トークン。Dependencies: none
-- [ ] subject-catalog -- 科目・階層キーワード・問題・選択肢・解説のスキーマ、作問ルールの検証、管理画面。Dependencies: app-foundation
-- [ ] quiz-session -- 出題導線、SRS による出題順、解答・正誤表示・解説・フラグ、解答の集計ビュー。Dependencies: subject-catalog
-- [ ] question-exchange -- 条件付き出力、生成 skill、JSON 取込。Dependencies: subject-catalog, quiz-session
-- [ ] learning-stats -- 設問別・キーワード別の正答率と出題回数のヒストグラム。Dependencies: subject-catalog, quiz-session
+- [x] app-foundation -- プロジェクト雛形、Supabase 接続・認証、共通レイアウト・テーマ・正誤色トークン。Dependencies: none
+- [x] subject-catalog -- 科目・階層キーワード・問題・選択肢・解説のスキーマ、作問ルールの検証、管理画面。Dependencies: app-foundation
+- [x] quiz-session -- 出題導線、SRS による出題順、解答・正誤表示・解説・フラグ、解答の集計ビュー。Dependencies: subject-catalog
+- [x] question-exchange -- 条件付き出力、生成 skill、JSON 取込。Dependencies: subject-catalog, quiz-session
+- [x] learning-stats -- 設問別・キーワード別の正答率と出題回数のヒストグラム。Dependencies: subject-catalog, quiz-session

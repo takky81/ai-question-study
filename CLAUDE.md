@@ -23,8 +23,9 @@
 
 - 思考は英語で行い、ユーザーへの応答は日本語で行う。
 - プロジェクトファイルに書き出す Markdown（requirements.md、design.md、tasks.md、research.md、検証レポート、steering 文書など）はすべて日本語で書く（spec.json.language を参照）。
-  - テンプレートの見出し構造（`Requirement 1:`、`Acceptance Criteria` など）や EARS のキーワード（When / If / While / Where / shall）は英語のままでよいが、本文・説明・要件の中身は日本語で書く。
-- skill（`.claude/skills/`）やテンプレート（`.kiro/settings/templates/`）自体は英語のままとし、翻訳しない。
+  - テンプレートの見出し構造（`Requirement 1:`、`Acceptance Criteria` など）の単語レベルの英語は残してよいが、本文・説明・要件の中身は日本語で書く。
+  - EARS の受け入れ基準は日本語の型（「〜とき、〜は〜する」「〜の間」「〜場合」「〜を含む場合」）で書き、When / If / While / Where / shall などの英語キーワードを文中に混ぜない（`.kiro/settings/rules/ears-format.md` を参照）。
+- skill（`.claude/skills/`）やテンプレート（`.kiro/settings/templates/`）自体は英語のままとし、翻訳しない。ただし EARS のパターン行と要件の Objective 行は日本語の型にしてある。
 
 ## 最小ワークフロー
 
