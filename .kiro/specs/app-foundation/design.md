@@ -388,7 +388,7 @@ export function resolveRedirect(param: string | null): string;    // 検証済�
 
 #### RequireAuth / LoginPage
 
-- `RequireAuth`: `loading` は読み込み表示（`role="status"`）、`signedOut` は `<Navigate replace to={buildLoginPath(pathname + search)} />`、`signedIn` は `<Outlet />`。
+- `RequireAuth`: `loading` は読み込み表示（`role="status"`）、`signedOut` は `<Navigate replace to={buildLoginPath(pathname + search + hash)} />`、`signedIn` は `<Outlet />`。
 - `LoginPage`: メール・パスワード欄（`autocomplete` 指定、`label` 付き）。送信中は送信ボタンを `disabled` にし「ログイン中…」を表示する（3.4）。エラーは `role="alert"` で表示し、入力値を保持する（3.2、3.3）。`signedIn` 状態では `resolveRedirect` の遷移先へ置換遷移する（3.1、4.3）。登録リンクは置かない（3.7）。
 
 ### features/home
