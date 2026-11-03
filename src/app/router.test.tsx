@@ -78,6 +78,24 @@ describe('toNavItems', () => {
   });
 });
 
+describe('出題のルート（quiz-session 10.1）', () => {
+  it('範囲選択画面は学習区分の「出題」導線を持ち、解答画面は導線を持たず、どちらも保護ルートである', () => {
+    const quiz = APP_ROUTES.find((r) => r.path === 'quiz');
+    const play = APP_ROUTES.find((r) => r.path === 'quiz/play');
+    expect(quiz?.public ?? false).toBe(false);
+    expect(play?.public ?? false).toBe(false);
+    expect(play).toBeDefined();
+    expect(play?.nav).toBeUndefined();
+    expect(quiz?.nav).toMatchObject({ label: '出題', group: 'learn', order: 1 });
+    expect(toNavItems(APP_ROUTES).filter((i) => i.group === 'learn').map((i) => i.path)).toEqual(['/quiz']);
+  });
+
+  it('未ログインで出題画面を開くとログイン画面へ遷移する', async () => {
+    const router = await renderAt('/quiz', false, APP_ROUTES);
+    expect(router.state.location.pathname).toBe('/login');
+  });
+});
+
 describe('toBasename', () => {
   it('BASE_URL の末尾 / を除き、ルート配信時は / とする（2.1、2.2）', () => {
     expect(toBasename('/ai-question-study/')).toBe('/ai-question-study');
@@ -105,10 +123,11 @@ describe('ルーター構成', () => {
     expect(screen.getAllByRole('link', { name: 'A' }).length).toBeGreaterThan(0);
   });
 
-  it('初期の登録表ではホームに導線が出ない（5.6）', async () => {
+  it('登録表の導線は nav を持つ行だけから作られ、学習区分に「出題」が出る（5.6、quiz-session 10.1）', async () => {
     await renderAt('/', true, APP_ROUTES);
     expect(screen.queryByRole('navigation', { name: 'サイドナビゲーション' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '学習' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: '学習' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: '出題' })[0]).toHaveAttribute('href', '/quiz');
   });
 
   it('存在しない URL ではホームへの導線付きの 404 画面を表示する（2.4）', async () => {

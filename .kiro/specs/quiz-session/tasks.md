@@ -109,7 +109,7 @@
   - _Boundary: KeywordRangePicker_
   - _Requirements: 1.2, 1.4, 1.9, 10.3_
 
-- [ ] 4. 統合: 画面とルート
+- [x] 4. 統合: 画面とルート
 
 - [x] 4.1 出題範囲の選択画面を作る
   - 科目一覧、範囲の木選択、範囲内の出題対象数と未出題数、開始ボタンを配置し、URL の範囲を初期選択にする
@@ -127,7 +127,7 @@
   - _Depends: 2.4, 2.5, 3.1, 3.2, 3.3_
   - _Requirements: 1.7, 2.4, 2.5, 3.3, 3.4, 3.5, 5.8, 7.7, 10.2, 10.5, 10.6_
 
-- [ ] 4.3 ルート登録表に出題の導線を追加する
+- [x] 4.3 ルート登録表に出題の導線を追加する
   - 学習区分の「出題」導線を持つ範囲選択画面と、導線なしの解答画面の2行を追加し、どちらも保護ルートにする
   - ログイン後に学習区分の導線から範囲選択画面を開け、未ログインではログイン画面へ遷移する
   - _Boundary: src/app/routes.tsx（行の追加のみ）_
@@ -170,3 +170,4 @@
 - 3.4: KeywordRangePicker は制御型 {keywords, selectedKeywordId, onSelect, label?}（null＝科目全体）。URL の keyword が科目のキーワードにない場合の扱いは 4.1 で決める（範囲なしとして範囲選択に留める等）。字下げは深さで無制限に増える（深さ10で約184px）。
 - 4.1: QuizStartPage は URL を初期状態として一度だけ読み、確定した範囲を replace で URL に書き戻す。URL の古い keyword は科目全体にして URL からも外す。解答画面への遷移先は /quiz/play?subject&keyword。
 - 4.2: 読込失敗の再試行は、候補未取得なら loadTry で取り直し、取得済みなら candidatesLoaded(state.candidates) で loading に戻す（解答済み・集計は保持）。候補の取り直し中は error 表示が残る（軽微）。
+- 4.3: 学習区分に「出題」が加わったため router.test.tsx の 5.6 の間接テストを書き換えた（5.6 は NavLinks.test.tsx と AppLayout.test.tsx で確認）。モバイル下部バーの「出題」は 5.2 の E2E で確認する。
