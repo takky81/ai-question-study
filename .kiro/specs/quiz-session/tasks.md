@@ -74,7 +74,7 @@
   - _Depends: 1.4, 2.1_
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 3.1, 3.3, 3.4, 7.2, 7.6, 9.7, 10.5_
 
-- [ ] 3. コア: 解答画面の部品
+- [x] 3. コア: 解答画面の部品
 
 - [x] 3.1 (P) 選択肢一覧の部品を作る
   - 各選択肢に、本文の選択領域と、右端の独立した「？」エリア（44px 以上、境界線と間隔、推測で解答することを示すラベル）を置き、末尾に「？」のない固定の「わからない」を置く
@@ -102,7 +102,7 @@
   - _Depends: 2.1_
   - _Requirements: 7.1, 7.3, 7.6, 7.7, 10.3_
 
-- [ ] 3.4 (P) 出題範囲の木選択の部品を作る
+- [x] 3.4 (P) 出題範囲の木選択の部品を作る
   - 科目のキーワード木（上流の木構築関数を使用）を表示し、「科目全体」または任意の深さのノードを1つ選べるようにする
   - 矢印キーでの移動・展開と選択状態の読み上げを持ち、モバイル幅で横スクロールしない
   - コンポーネントの操作で、途中ノードを選ぶと選択範囲として通知される
@@ -167,3 +167,4 @@
 - 3.1: ChoiceList の props は { choices, selection, correctChoiceId, disabled?, onAnswer(kind, choiceId) }。package.json に lint スクリプトはなく、検証コマンドは typecheck / test / build。
 - 3.2: AnswerFeedback の props は { judged, explanation, keywordIds, keywords: KeywordNode[] }。QuestionStatsBar は aria-live=polite。
 - 3.3: FlagForm は初期値をマウント時だけ読む。4.2 では listOpenFlags の完了後に <FlagForm key={questionId} …/> で描画すること。
+- 3.4: KeywordRangePicker は制御型 {keywords, selectedKeywordId, onSelect, label?}（null＝科目全体）。URL の keyword が科目のキーワードにない場合の扱いは 4.1 で決める（範囲なしとして範囲選択に留める等）。字下げは深さで無制限に増える（深さ10で約184px）。
