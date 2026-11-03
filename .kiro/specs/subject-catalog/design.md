@@ -509,7 +509,7 @@ export function toCatalogErrorMessage(context: string, error: { code?: string; m
 
 #### SubjectList / KeywordTree
 
-- `KeywordTree` は `role="tree"`／`treeitem`、`aria-expanded`、矢印キーでの移動と展開を持つ（3.2、9.4）。各ノードのメニュー（子の追加、改名、上へ／下へ、移動先の選択、削除）はボタンとダイアログで操作し、ドラッグ操作を必須にしない（3.5、3.6、9.4）。移動先の候補から `keywordSubtreeIds` の結果を除外する（3.7）。
+- `KeywordTree` は `role="tree"`／`treeitem`、`aria-expanded`、矢印キーでの移動と展開を持つ（3.2、9.4）。各ノードの操作（子の追加、改名、上へ／下へ、移動先の選択、削除）は、木で選択したキーワードに対する操作パネル（木の下に置くボタン・入力欄・移動先の `<select>`）で行い、木の roving tabindex に操作ボタンを含めない。ドラッグ操作は必須にせず、削除の確認だけ `ConfirmDialog` を使う（3.5、3.6、9.4）。移動先の候補から `keywordSubtreeIds` の結果を除外する（3.7）。
 - 削除前に件数取得 API の結果を `ConfirmDialog` に表示する（2.4、3.8）。
 
 #### QuestionList / QuestionFilters
