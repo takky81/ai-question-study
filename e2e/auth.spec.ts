@@ -1,33 +1,11 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
+import { OWNER_EMAIL, OWNER_PASSWORD, clickLogout, fillLogin, homeHeading, loginAsOwner, loginHeading } from './helpers';
 
 // 認証経路の E2E。ローカル Supabase（seed の所有者アカウント）に対して実行する。
-const OWNER_EMAIL = 'owner@example.com';
-const OWNER_PASSWORD = 'owner-password-local';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? 'http://127.0.0.1:54521';
 const PUBLISHABLE_KEY =
   process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
-
-const homeHeading = (page: Page) => page.getByRole('heading', { level: 1, name: 'ホーム' });
-const loginHeading = (page: Page) => page.getByRole('heading', { level: 1, name: 'ログイン' });
-
-async function fillLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.getByLabel('メールアドレス').fill(email);
-  await page.getByLabel('パスワード').fill(password);
-  await page.getByRole('button', { name: 'ログイン' }).click();
-}
-
-async function loginAsOwner(page: Page): Promise<void> {
-  await page.goto('/login');
-  await fillLogin(page, OWNER_EMAIL, OWNER_PASSWORD);
-  await expect(homeHeading(page)).toBeVisible();
-}
-
-// PC 幅ではヘッダーに常時表示、モバイル幅ではメニュー内にあるログアウトを押す。
-async function clickLogout(page: Page): Promise<void> {
-  const menu = page.getByRole('button', { name: 'メニュー' });
-  if (await menu.isVisible()) await menu.click();
-  await page.getByRole('button', { name: 'ログアウト' }).click();
-}
 
 test.describe('認証経路', () => {
   test('seed アカウントでログインするとホームに到達する', async ({ page }) => {
