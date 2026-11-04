@@ -87,7 +87,7 @@ describe('出題のルート（quiz-session 10.1）', () => {
     expect(play).toBeDefined();
     expect(play?.nav).toBeUndefined();
     expect(quiz?.nav).toMatchObject({ label: '出題', group: 'learn', order: 1 });
-    expect(toNavItems(APP_ROUTES).filter((i) => i.group === 'learn').map((i) => i.path)).toEqual(['/quiz']);
+    expect(toNavItems(APP_ROUTES).filter((i) => i.group === 'learn').map((i) => i.path)).toEqual(['/quiz', '/stats']);
   });
 
   it('未ログインで出題画面を開くとログイン画面へ遷移する', async () => {
@@ -117,6 +117,26 @@ describe('入出力のルート（question-exchange 10.1）', () => {
     await renderAt('/', true, APP_ROUTES);
     expect(screen.getAllByRole('heading', { name: '管理' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: '入出力' })[0]).toHaveAttribute('href', '/exchange');
+  });
+});
+
+describe('統計のルート（learning-stats 1.1、1.6）', () => {
+  it('統計画面は学習区分の「統計」導線を持つ保護ルートで、出題の次に並ぶ', () => {
+    const stats = APP_ROUTES.find((r) => r.path === 'stats');
+    expect(stats).toBeDefined();
+    expect(stats?.public ?? false).toBe(false);
+    expect(stats?.nav).toMatchObject({ label: '統計', group: 'learn', order: 2 });
+    expect(toNavItems(APP_ROUTES).filter((i) => i.group === 'learn').map((i) => i.path)).toEqual(['/quiz', '/stats']);
+  });
+
+  it('未ログインで統計画面を開くとログイン画面へ遷移する', async () => {
+    const router = await renderAt('/stats', false, APP_ROUTES);
+    expect(router.state.location.pathname).toBe('/login');
+  });
+
+  it('ログイン後の導線の学習区分に「統計」が現れる', async () => {
+    await renderAt('/', true, APP_ROUTES);
+    expect(screen.getAllByRole('link', { name: '統計' })[0]).toHaveAttribute('href', '/stats');
   });
 });
 
