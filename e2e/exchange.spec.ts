@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { OWNER_EMAIL, OWNER_PASSWORD, loginAsOwner } from './helpers';
+import { OWNER_EMAIL, OWNER_PASSWORD, fillLogin, homeHeading, loginAsOwner } from './helpers';
 
 // question-exchange（入出力）の E2E。
 // 出力の describe は seed（「E2E 交換テスト」「E2E 交換大量データ」）を読むだけで、書き換えない。
@@ -580,5 +580,412 @@ test.describe('取込・競合・フラグ解消', () => {
     expect((await keywordsOf(f)).map((k) => k.name)).not.toContain('ロールバックされるキーワード');
     expect(flagStatuses([q1.id])[q1.id]).toEqual(['open']);
     expect((await fetchChoices(f.db, q1.id)).filter((c) => c.is_correct)).toHaveLength(1);
+  });
+});
+
+// ============================================================
+// RLS（10.7）
+// 別の所有者のセッションで、所有者の科目が見えず、所有者の ID を含む取込が失敗して何も変わらないこと。
+// 所有者側のデータは実行ごとの接頭辞付きの科目（createFixture）を使い、seed は触らない。
+// ============================================================
+
+const OTHER_EMAIL = 'other@example.com';
+const OTHER_PASSWORD = 'other-password-local';
+
+async function otherClient(): Promise<SupabaseClient> {
+  const { url, key } = loadEnv();
+  const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { error } = await client.auth.signInWithPassword({ email: OTHER_EMAIL, password: OTHER_PASSWORD });
+  if (error) throw error;
+  return client;
+}
+
+// 所有者から見た科目の内容（問題・キーワード・選択肢・フラグ）
+async function ownerSnapshot(f: Fixture): Promise<unknown> {
+  const { data: qs, error } = await f.db
+    .from('questions')
+    .select('id, stem, updated_at, disabled_at')
+    .eq('subject_id', f.subjectId)
+    .order('id');
+  if (error) throw error;
+  const choices = [];
+  for (const q of f.q) choices.push(await fetchChoices(f.db, q.id));
+  return {
+    questions: qs,
+    keywords: (await keywordsOf(f)).sort((a, b) => a.id.localeCompare(b.id)),
+    choices,
+    flags: flagStatuses(f.q.map((q) => q.id)),
+  };
+}
+
+test.describe('RLS', () => {
+  desktopOnly();
+  test.afterAll(() => cleanupImportSubjects());
+
+  test('別の所有者には所有者の科目が出力に現れず、所有者の ID を含む取込は失敗して何も変わらない（10.7）', async ({ page }) => {
+    const f = await createFixture('rls');
+    const { data: s, error: se } = await f.db.from('subjects').select('name').eq('id', f.subjectId).single();
+    if (se) throw se;
+    const subjectName = (s as { name: string }).name;
+    const before = await ownerSnapshot(f);
+
+    await page.goto('/login');
+    await fillLogin(page, OTHER_EMAIL, OTHER_PASSWORD);
+    await expect(homeHeading(page)).toBeVisible();
+    await page.goto('/exchange');
+    await expect(page.getByRole('heading', { level: 1, name: '入出力' })).toBeVisible();
+
+    // 出力: 科目の選択肢に所有者の科目（自前・seed とも）が現れない
+    const exportPanel = page.getByRole('tabpanel', { name: '出力' });
+    const select = exportPanel.getByLabel('科目', { exact: true });
+    await expect(select).toBeEnabled();
+    const labels = await select.locator('option').allTextContents();
+    expect(labels).not.toContain(subjectName);
+    expect(labels).not.toContain('E2E 交換テスト');
+
+    // 取込: 所有者の科目・キーワード・問題・選択肢の ID を参照するファイル
+    const file = importFileOf(
+      f,
+      {
+        update: [{ ...asUpdate(f, 0), stem: '別の所有者が書き換えようとした問題文として正しいものはどれか。' }],
+        disable: [{ id: f.q[1]!.id, reason: '別の所有者の無効化' }],
+      },
+      {
+        add: [{ tempKey: 'kw-x', parent: { id: f.kw.a }, name: '別の所有者のキーワード' }],
+        rename: [{ id: f.kw.b, name: '別の所有者の改名' }],
+      },
+    );
+    await page.getByRole('tab', { name: '取込' }).click();
+    const panel = page.getByRole('tabpanel', { name: '取込' });
+    await panel.getByLabel('取込ファイル').setInputFiles(writeImportFile('rls.json', file));
+    await expect(panel.getByText(`科目が見つかりません（${f.subjectId}）。`)).toBeVisible();
+    await expect(panel.getByText('エラーがあるため適用できません。ファイルを直して選び直してください。')).toBeVisible();
+    await expect(panel.getByRole('button', { name: '適用する' })).toHaveCount(0);
+
+    // 画面を経由せず RPC に直接送っても失敗する
+    const other = await otherClient();
+    const { error: rpcError } = await other.rpc('apply_exchange_import', {
+      p: {
+        subjectId: f.subjectId,
+        expected: { keywords: [], questions: [] },
+        keywordAdds: [{ tempKey: 'kw-x', parentId: f.kw.a, parentTempKey: null, name: '別の所有者のキーワード' }],
+        keywordRenames: [{ id: f.kw.b, name: '別の所有者の改名' }],
+        keywordMoves: [],
+        questionUpdates: [],
+        questionCreates: [],
+        questionDisables: [{ id: f.q[1]!.id, reason: '別の所有者の無効化' }],
+        modifiedQuestionIds: [f.q[0]!.id],
+      },
+    });
+    expect(rpcError).not.toBeNull();
+
+    // 所有者から見て何も変わっていない
+    expect(await ownerSnapshot(f)).toEqual(before);
+  });
+});
+
+// ============================================================
+// レスポンシブ（10.2、10.3）
+// mobile（390×844）と desktop（1280×800）の両方で実行する（desktopOnly を付けない）。
+// ============================================================
+
+async function expectNoHorizontalScroll(page: Page): Promise<void> {
+  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+}
+
+async function box(locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> {
+  const b = await locator.boundingBox();
+  if (!b) throw new Error('要素の位置が取れません');
+  return b;
+}
+
+test.describe('レスポンシブ', () => {
+  test.afterAll(() => cleanupImportSubjects());
+
+  test('出力・取込・プレビューが、モバイルでは横スクロールなし、PC では2列で表示される（10.2、10.3）', async ({
+    page,
+  }, testInfo) => {
+    const mobile = testInfo.project.name === 'mobile';
+    const f = await createFixture(`resp-${testInfo.project.name}`);
+
+    // 出力（条件の指定中）
+    const exportPanel = await openExport(page);
+    await expectNoHorizontalScroll(page);
+    await selectSubject(exportPanel, 'E2E 交換テスト');
+    const g = await box(exportPanel.getByRole('group', { name: 'フラグ条件' }));
+    const t = await box(exportPanel.getByRole('tree', { name: '範囲' }));
+    await expectNoHorizontalScroll(page);
+    if (mobile) {
+      expect(t.y).toBeGreaterThanOrEqual(g.y + g.height);
+    } else {
+      // 条件（左）と範囲（右）が横に並ぶ
+      expect(t.x).toBeGreaterThanOrEqual(g.x + g.width);
+      expect(t.y).toBeLessThan(g.y + g.height);
+    }
+
+    // 取込（ファイル選択前とプレビュー）
+    await page.getByRole('tab', { name: '取込' }).click();
+    const panel = page.getByRole('tabpanel', { name: '取込' });
+    await expect(panel.getByLabel('取込ファイル')).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    const file = importFileOf(f, {
+      update: [
+        {
+          ...asUpdate(f, 0),
+          stem: 'レスポンシブ確認用に長く書き換えた問題文として、画面の幅に収まって折り返されるものはどれか。',
+        },
+      ],
+    });
+    await panel.getByLabel('取込ファイル').setInputFiles(writeImportFile('resp.json', file));
+    await expect(panel.getByRole('button', { name: '適用する' })).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    const b = await box(panel.getByText('変更前', { exact: true }).first());
+    const a = await box(panel.getByText('変更後', { exact: true }).first());
+    if (mobile) {
+      expect(a.y).toBeGreaterThan(b.y);
+    } else {
+      // 変更前と変更後が横に並ぶ
+      expect(a.x).toBeGreaterThan(b.x + b.width);
+      expect(Math.abs(a.y - b.y)).toBeLessThan(2);
+    }
+    // 適用はせず、ファイルを外して終える
+    await panel.getByRole('button', { name: 'ファイルを外す' }).click();
+    await expect(panel.getByRole('button', { name: '適用する' })).toHaveCount(0);
+  });
+});
+
+// ============================================================
+// キーボード操作（10.4、10.6）
+// ============================================================
+
+async function expectFocusRing(target: Locator): Promise<void> {
+  const outline = await target.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { style: s.outlineStyle, width: parseFloat(s.outlineWidth) };
+  });
+  expect(outline.style).not.toBe('none');
+  expect(outline.width).toBeGreaterThan(0);
+}
+
+/** Tab（または Shift+Tab）を押して target にフォーカスを移し、フォーカス表示があることを確かめる */
+async function tabTo(page: Page, target: Locator, key: 'Tab' | 'Shift+Tab' = 'Tab', max = 80): Promise<void> {
+  const handle = await target.elementHandle();
+  if (!handle) throw new Error('対象の要素がありません');
+  for (let i = 0; i < max; i++) {
+    await page.keyboard.press(key);
+    if (await handle.evaluate((el) => el === document.activeElement)) {
+      await expectFocusRing(target);
+      return;
+    }
+  }
+  throw new Error(`${max} 回の ${key} で対象に届きませんでした`);
+}
+
+test.describe('キーボード操作', () => {
+  desktopOnly();
+  test.afterAll(() => cleanupImportSubjects());
+
+  test('キーボードだけで取込から適用まで操作でき、保持中の離脱で確認が出て Esc で取り消せる（10.4、10.6）', async ({
+    page,
+  }) => {
+    const f = await createFixture('kbd');
+    const newStem = 'キーボードで取り込んだ問題文として正しいものはどれか。';
+    const file = importFileOf(f, { update: [{ ...asUpdate(f, 0), stem: newStem }] });
+
+    await loginAsOwner(page);
+    await page.goto('/exchange');
+    await expect(page.getByRole('heading', { level: 1, name: '入出力' })).toBeVisible();
+
+    // タブの切替（矢印キー）とファイル選択への移動
+    const exportTab = page.getByRole('tab', { name: '出力' });
+    const importTab = page.getByRole('tab', { name: '取込' });
+    await tabTo(page, exportTab);
+    await page.keyboard.press('ArrowRight');
+    await expect(importTab).toBeFocused();
+    await expect(importTab).toHaveAttribute('aria-selected', 'true');
+    await expectFocusRing(importTab);
+    const panel = page.getByRole('tabpanel', { name: '取込' });
+    const input = panel.getByLabel('取込ファイル');
+    await tabTo(page, input);
+    // ファイルの中身だけは OS のダイアログの代わりに setInputFiles で渡す
+    await input.setInputFiles(writeImportFile('kbd.json', file));
+    const apply = panel.getByRole('button', { name: '適用する' });
+    await expect(apply).toBeEnabled();
+
+    // 保持中に導線のリンクへ移って Enter → 確認が出る → Esc で取り消し
+    const nav = page.getByRole('link', { name: 'カタログ' }).first();
+    await tabTo(page, nav, 'Shift+Tab');
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', { name: '取込の内容を破棄しますか' });
+    await expect(dialog).toBeVisible();
+    const cancel = dialog.getByRole('button', { name: 'キャンセル' });
+    await expect(cancel).toBeFocused();
+    await expectFocusRing(cancel);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(page).toHaveURL(/\/exchange$/);
+    await expect(apply).toBeEnabled();
+    await expect(panel.getByRole('button', { name: 'ファイルを外す' })).toBeVisible();
+
+    // プレビューを確認して適用（Tab で移動して Enter）
+    await expect(panel.getByText(newStem).first()).toBeAttached();
+    await tabTo(page, apply);
+    await page.keyboard.press('Enter');
+    await expect(panel.getByRole('status', { name: '適用の結果' })).toContainText('問題の修正: 1件');
+    const { data, error } = await f.db.from('questions').select('stem').eq('id', f.q[0]!.id).single();
+    if (error) throw error;
+    expect((data as { stem: string }).stem).toBe(newStem);
+
+    // 適用後は保持していないので、離脱の確認は出ずに移動する
+    await tabTo(page, nav, 'Shift+Tab');
+    await page.keyboard.press('Enter');
+    await expect(page).not.toHaveURL(/\/exchange$/);
+    await expect(dialog).toHaveCount(0);
+  });
+});
+
+// ============================================================
+// 例の取込用 JSON（9.1、9.6）
+// question-authoring skill の例（references/example-import.json）は架空の ID を使うため、
+// 例が参照する形の科目（キーワード3つ・問題2問）を実行ごとに作り、例の ID だけを作った ID に置き換えて取り込む。
+// 名前・問題文・選択肢・操作の組み合わせは例のまま使う。
+// ============================================================
+
+const EXAMPLE_PATH = resolve(process.cwd(), '.claude/skills/question-authoring/references/example-import.json');
+const EX_IDS = {
+  subject: '11111111-1111-4111-8111-111111111111',
+  kw: [
+    '22222222-2222-4222-8222-222222222201',
+    '22222222-2222-4222-8222-222222222202',
+    '22222222-2222-4222-8222-222222222203',
+  ],
+  q: ['33333333-3333-4333-8333-333333333301', '33333333-3333-4333-8333-333333333302'],
+  choice: [
+    '44444444-4444-4444-8444-444444444401',
+    '44444444-4444-4444-8444-444444444402',
+    '44444444-4444-4444-8444-444444444403',
+  ],
+};
+
+test.describe('例の取込用 JSON', () => {
+  desktopOnly();
+  test.afterAll(() => cleanupImportSubjects());
+
+  test('skill の例の取込用 JSON を、ID を置き換えて取り込むと成功する（9.1、9.6）', async ({ page }) => {
+    const db = await ownerClient();
+    const { data: s, error: se } = await db
+      .from('subjects')
+      .insert({ name: `${IMPORT_PREFIX}${Date.now()}-example` })
+      .select('id')
+      .single();
+    if (se) throw se;
+    const subjectId = s.id as string;
+    const kwInsert = async (name: string, parentId: string | null) => {
+      const { data, error } = await db
+        .from('keywords')
+        .insert({ subject_id: subjectId, parent_id: parentId, name })
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data.id as string;
+    };
+    // 例の参照: 01 は追加「コンテナ」の親、02 は「仮想化技術」へ改名、03 は「コンテナ」の下へ移動
+    const k1 = await kwInsert('仮想化', null);
+    const k2 = await kwInsert('仮想化方式', k1);
+    const k3 = await kwInsert('Docker', null);
+    const saveQ = async (stem: string) => {
+      const { data, error } = await db.rpc('save_question', {
+        p: {
+          id: null,
+          subjectId,
+          kind: 'feature',
+          stem,
+          explanation: '仮想化の方式の解説。',
+          keywordIds: [k2],
+          choices: CHOICE_BODIES.map((body, i) => ({ id: null, body, explanation: `${body}の解説。`, isCorrect: i === 0 })),
+        },
+      });
+      if (error) throw error;
+      return data as string;
+    };
+    const q1 = await saveQ('ハイパーバイザ型の仮想化の特徴はどれか。');
+    const q2 = await saveQ('仮想化の方式とその利点を答えよ。');
+    const q1Choices = await fetchChoices(db, q1);
+
+    const replacements: [string, string][] = [
+      [EX_IDS.subject, subjectId],
+      [EX_IDS.kw[0]!, k1],
+      [EX_IDS.kw[1]!, k2],
+      [EX_IDS.kw[2]!, k3],
+      [EX_IDS.q[0]!, q1],
+      [EX_IDS.q[1]!, q2],
+      ...EX_IDS.choice.map((id, i): [string, string] => [id, q1Choices[i]!.id]),
+    ];
+    let text = readFileSync(EXAMPLE_PATH, 'utf8');
+    for (const [from, to] of replacements) {
+      expect(text).toContain(from);
+      text = text.split(from).join(to);
+    }
+    const example = JSON.parse(text) as { questions: { update: { stem: string }[]; create: { stem: string }[] } };
+
+    const panel = await openImport(page);
+    await panel.getByLabel('取込ファイル').setInputFiles(writeImportFile('example-import.json', example));
+    const apply = panel.getByRole('button', { name: '適用する' });
+    await expect(apply).toBeVisible();
+    await expect(panel.getByText('エラーがあるため適用できません。ファイルを直して選び直してください。')).toHaveCount(0);
+    // 例の basedOnExportedAt（2026-11-01）は作成した科目の更新日時より古いため、必ず「出力後に更新」の警告が出る。
+    // 警告を確認するまで適用できず、確認すると適用できる
+    await expect(panel.getByText('出力後に更新されています', { exact: false }).first()).toBeVisible();
+    const ack = panel.getByRole('checkbox', { name: '警告を確認しました' });
+    await expect(ack).toBeVisible();
+    await expect(apply).toBeDisabled();
+    await ack.check();
+    await expect(apply).toBeEnabled();
+    await apply.click();
+    const result = panel.getByRole('status', { name: '適用の結果' });
+    await expect(result).toContainText('取込を適用しました');
+    for (const line of [
+      'キーワードの追加: 2件',
+      'キーワードの改名: 1件',
+      'キーワードの移動: 1件',
+      '問題の修正: 1件',
+      '問題の新規作成: 1件',
+      '問題の無効化: 1件',
+    ]) {
+      await expect(result).toContainText(line);
+    }
+
+    // DB への反映
+    const { data: kwRows, error: ke } = await db
+      .from('keywords')
+      .select('id, name, parent_id')
+      .eq('subject_id', subjectId);
+    if (ke) throw ke;
+    const kws = kwRows as DbKeyword[];
+    const container = kws.find((k) => k.name === 'コンテナ');
+    const k8s = kws.find((k) => k.name === 'Kubernetes');
+    expect(container?.parent_id).toBe(k1);
+    expect(k8s?.parent_id).toBe(container?.id);
+    expect(kws.find((k) => k.id === k2)?.name).toBe('仮想化技術');
+    expect(kws.find((k) => k.id === k3)?.parent_id).toBe(container?.id);
+
+    const { data: qRows, error: qe } = await db.from('questions').select('id, stem, disabled_at').eq('subject_id', subjectId);
+    if (qe) throw qe;
+    const qs = qRows as { id: string; stem: string; disabled_at: string | null }[];
+    expect(qs).toHaveLength(3);
+    expect(qs.find((q) => q.id === q1)?.stem).toBe(example.questions.update[0]!.stem);
+    expect(qs.find((q) => q.id === q2)?.disabled_at).not.toBeNull();
+    const created = qs.find((q) => q.id !== q1 && q.id !== q2)!;
+    expect(created.stem).toBe(example.questions.create[0]!.stem);
+    expect((await fetchChoices(db, created.id)).filter((c) => c.removed_at === null)).toHaveLength(6);
+    // 例で ID を持つ3つの選択肢は同じ ID のまま残り、例にない4つ目は外される
+    const after1 = await fetchChoices(db, q1);
+    const active1 = after1.filter((c) => c.removed_at === null).map((c) => c.id);
+    for (const c of q1Choices.slice(0, 3)) expect(active1).toContain(c.id);
+    expect(after1.find((c) => c.id === q1Choices[3]!.id)?.removed_at).not.toBeNull();
   });
 });
