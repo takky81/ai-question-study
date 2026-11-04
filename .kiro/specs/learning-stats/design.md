@@ -117,7 +117,7 @@ graph TB
 
 ```text
 supabase/migrations/
-└── 20261106000000_stats_functions.sql   # stats_private スキーマ、rate_bin、count_bin、target_items、複合型、stats_histograms、stats_bin_items、権限
+└── 20261107000000_stats_functions.sql   # stats_private スキーマ、rate_bin、count_bin、target_items、複合型、stats_histograms、stats_bin_items、権限
 src/features/stats/
 ├── types.ts                             # StatsTarget、StatsMetric、HistogramBin、Histogram、StatsHistograms、BinItem
 ├── bins.ts                              # UNATTEMPTED_BIN、binLabel、buildHistograms、barRatio（純粋関数）
