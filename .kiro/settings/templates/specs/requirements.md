@@ -1,10 +1,12 @@
 # Requirements Document
 
 ## Introduction
+
 {{INTRODUCTION}}
 
 <!-- Optional when scope could be misread or the feature touches adjacent systems/specs -->
 ## Boundary Context (Optional)
+
 - **In scope**: {{IN_SCOPE_BEHAVIORS}}
 - **Out of scope**: {{OUT_OF_SCOPE_BEHAVIORS}}
 - **Adjacent expectations**: {{ADJACENT_SYSTEM_OR_SPEC_EXPECTATIONS}}
@@ -16,6 +18,7 @@
 **Objective:** {{ROLE}}として、{{CAPABILITY}}したい。それにより{{BENEFIT}}。
 
 #### Acceptance Criteria
+
 1. [イベント]とき、[システム]は[応答]する
 2. [異常・望ましくない事象]場合、[システム]は[応答]する
 3. [前提状態]の間、[システム]は[応答]する
@@ -23,9 +26,11 @@
 5. [システム]は[応答]する
 
 ### Requirement 2: {{REQUIREMENT_AREA_2}}
+
 **Objective:** {{ROLE}}として、{{CAPABILITY}}したい。それにより{{BENEFIT}}。
 
 #### Acceptance Criteria
+
 1. [イベント]とき、[システム]は[応答]する
 2. [イベント]かつ[追加条件]とき、[システム]は[応答]する
 

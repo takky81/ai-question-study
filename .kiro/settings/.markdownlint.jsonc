@@ -1,0 +1,6 @@
+{
+  "extends": "../../.markdownlint.jsonc",
+  // kiro のテンプレートは太字のラベルと、同名のプレースホルダー見出し（[Pattern Name] など）を意図して使う
+  "MD036": false,
+  "MD024": false
+}
