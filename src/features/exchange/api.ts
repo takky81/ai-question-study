@@ -39,7 +39,11 @@ const P0001_MESSAGES: Record<string, string> = {
 
 /** DB・RPC のエラーを画面表示用の日本語に変換する。未知のものは操作の文脈を付ける（6.7）。 */
 export function toExchangeErrorMessage(context: string, error: DbError): string {
-  if (error.code === '23505') return '同じ親の下に同じ名前のキーワードがあります';
+  if (error.code === '23505') {
+    // 一意違反は制約名で区別する。該当しないものは汎用の文言にする
+    if (error.message.includes('keywords_sibling_name_key')) return '同じ親の下に同じ名前のキーワードがあります';
+    if (error.message.includes('choices_question_one_correct_key')) return '正解は1つにしてください';
+  }
   if (error.code === 'P0001') {
     const known = P0001_MESSAGES[error.message];
     if (known) return known;

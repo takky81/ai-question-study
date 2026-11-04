@@ -56,7 +56,9 @@ describe('toExchangeErrorMessage', () => {
   it.each([
     [{ code: 'P0001', message: 'stale_preview' }, 'プレビューの作成後にデータが変更されました。再検証してください'],
     [{ code: 'P0001', message: 'keyword_cycle' }, 'キーワードを自分自身または配下へは移動できません'],
-    [{ code: '23505', message: 'dup' }, '同じ親の下に同じ名前のキーワードがあります'],
+    [{ code: '23505', message: 'duplicate key value violates unique constraint "keywords_sibling_name_key"' }, '同じ親の下に同じ名前のキーワードがあります'],
+    [{ code: '23505', message: 'duplicate key value violates unique constraint "choices_question_one_correct_key"' }, '正解は1つにしてください'],
+    [{ code: '23505', message: 'dup' }, '取込の適用に失敗しました: dup'],
     [{ code: 'P0001', message: 'one_correct_required' }, '正解は1つにしてください'],
   ])('%o を専用の文言にする', (error, expected) => {
     expect(toExchangeErrorMessage('取込の適用', error)).toBe(expected);
