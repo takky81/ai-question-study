@@ -1,11 +1,12 @@
 // ルート登録表。後続 spec はここに1行追加するだけで画面と導線を組み込む（1.4）。
-import { FolderTree, GraduationCap, type LucideIcon } from 'lucide-react';
+import { ArrowLeftRight, FolderTree, GraduationCap, type LucideIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 
 // NavGroup は共通部品側（src/components/NavLinks.tsx）で定義し、ここでは import して再 export する。
 import type { NavGroup, NavItem } from '../components/NavLinks';
 import { CatalogPage } from '../features/catalog/CatalogPage';
 import { QuestionEditPage } from '../features/catalog/QuestionEditPage';
+import { ExchangePage } from '../features/exchange/ExchangePage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { HomePage } from '../features/home/HomePage';
 import { QuizPlayPage } from '../features/quiz/QuizPlayPage';
@@ -39,6 +40,7 @@ export const APP_ROUTES: readonly AppRoute[] = [
   { path: 'catalog/:subjectId', element: <CatalogPage /> },
   { path: 'catalog/:subjectId/questions/new', element: <QuestionEditPage /> },
   { path: 'catalog/:subjectId/questions/:questionId', element: <QuestionEditPage /> },
+  { path: 'exchange', element: <ExchangePage />, nav: { label: '入出力', group: 'manage', icon: ArrowLeftRight, order: 2 } },
   { path: 'quiz', element: <QuizStartPage />, nav: { label: '出題', group: 'learn', icon: GraduationCap, order: 1 } },
   { path: 'quiz/play', element: <QuizPlayPage /> },
 ];

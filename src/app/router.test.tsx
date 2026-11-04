@@ -96,6 +96,30 @@ describe('出題のルート（quiz-session 10.1）', () => {
   });
 });
 
+describe('入出力のルート（question-exchange 10.1）', () => {
+  it('入出力画面は管理区分の「入出力」導線を持つ保護ルートで、カタログの後に並ぶ', () => {
+    const exchange = APP_ROUTES.find((r) => r.path === 'exchange');
+    expect(exchange).toBeDefined();
+    expect(exchange?.public ?? false).toBe(false);
+    expect(exchange?.nav).toMatchObject({ label: '入出力', group: 'manage', order: 2 });
+    expect(toNavItems(APP_ROUTES).filter((i) => i.group === 'manage').map((i) => i.path)).toEqual([
+      '/catalog',
+      '/exchange',
+    ]);
+  });
+
+  it('未ログインで入出力画面を開くとログイン画面へ遷移する', async () => {
+    const router = await renderAt('/exchange', false, APP_ROUTES);
+    expect(router.state.location.pathname).toBe('/login');
+  });
+
+  it('ログイン後の導線の管理区分に「入出力」が現れる', async () => {
+    await renderAt('/', true, APP_ROUTES);
+    expect(screen.getAllByRole('heading', { name: '管理' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: '入出力' })[0]).toHaveAttribute('href', '/exchange');
+  });
+});
+
 describe('toBasename', () => {
   it('BASE_URL の末尾 / を除き、ルート配信時は / とする（2.1、2.2）', () => {
     expect(toBasename('/ai-question-study/')).toBe('/ai-question-study');
