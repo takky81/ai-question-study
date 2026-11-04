@@ -1,5 +1,4 @@
 // 取込ファイルと現在のデータの差分、修正の判定（3.6、5.1〜5.8、8.2、8.3）。純粋関数。
-import type { Keyword } from '@/features/catalog/types';
 import { keywordPath, type KeywordNode } from '@/lib/keywordTree';
 import type { ExportFlag, ImportChoice, ImportFileV1, ImportQuestionBody, KeywordRef } from './format';
 import { tempKeywordId, type ImportIssue, type ImportSnapshot, type SnapshotQuestion } from './importValidate';
@@ -106,8 +105,8 @@ function choiceChanges(before: SnapshotChoice[], after: ImportChoice[]): ChoiceC
   return out;
 }
 
-const isAfter = (updatedAt: string | undefined, exportedAt: string | null) =>
-  exportedAt !== null && updatedAt !== undefined && Date.parse(updatedAt) > Date.parse(exportedAt);
+const isAfter = (updatedAt: string, exportedAt: string | null) =>
+  exportedAt !== null && Date.parse(updatedAt) > Date.parse(exportedAt);
 
 const STALE_MESSAGE = (label: string) => `${label}は出力後に更新されています。`;
 
@@ -121,7 +120,7 @@ export function computeImportDiff(file: ImportFileV1, snapshot: ImportSnapshot):
 
   // ---- キーワード: 変更前の木と、add → rename → move を適用した変更後の木 ----
   const beforeTree: KeywordNode[] = snapshot.keywords;
-  const existing = new Map<string, Keyword & { updatedAt?: string }>(snapshot.keywords.map((k) => [k.id, k]));
+  const existing = new Map(snapshot.keywords.map((k) => [k.id, k]));
   const afterTree = new Map<string, KeywordNode>(snapshot.keywords.map((k) => [k.id, { ...k }]));
   for (const a of add) {
     const id = tempKeywordId(a.tempKey);
@@ -153,8 +152,8 @@ export function computeImportDiff(file: ImportFileV1, snapshot: ImportSnapshot):
     ...sortedMoves.map(({ id }) => ({ type: 'moved' as const, id, beforePath: names(beforeTree, id), afterPath: names(afterNodes, id) })),
   ];
   for (const { id, path } of [...renames, ...moves]) {
-    const k = existing.get(id) as Keyword & { updatedAt?: string };
-    if (isAfter(k.updatedAt, exportedAt)) warn(path, `キーワード「${k.name}」`);
+    const k = existing.get(id);
+    if (k && isAfter(k.updatedAt, exportedAt)) warn(path, `キーワード「${k.name}」`);
   }
 
   // ---- 問題 ----

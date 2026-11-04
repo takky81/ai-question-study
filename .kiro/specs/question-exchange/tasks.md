@@ -67,7 +67,7 @@
   - 2.3 のスナップショット型と検証結果に依存するため、2.3 と並列にしない
   - _Requirements: 3.6, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 8.2, 8.3_
 
-- [ ] 2.5 適用ペイロードの生成を作る
+- [x] 2.5 適用ペイロードの生成を作る
   - 差分で変化のある操作だけを含め、キーワード追加を親が先になる順に並べ、一時キーを仮の ID 表記に変換した問題の入力を作る
   - 修正・無効化する問題、改名・移動するキーワード、追加・移動の既存の親、紐づけ先の既存キーワードの更新日時を、期待する状態として含める
   - 解消の対象には修正された問題の ID だけを含める
@@ -183,3 +183,4 @@
 - 2.2: ExportRows と行型（camelCase）は exportBuild.ts に置く。2.6 の api.ts は snake_case の RPC 行をこの型に変換する。ファイル名の日時はローカル時刻、exportedAt は UTC の ISO。
 - 2.3: validateImport は移動後の最終状態だけで循環を判定する。2.4/2.5 は keywordMoves を移動後の深さが浅い順に並べ、途中で循環が生じないようにし、親の入れ替え（A/B）のテストを付けること。一時キーの仮 ID は tempKeywordId（`tmp:<tempKey>`）を使う。
 - 2.4: ImportSnapshot.keywords は updatedAt を持つ型に広げる（design.md 修正済み）。2.5 で importValidate.ts の型を (Keyword & { updatedAt: string })[] にし diff.ts のキャストを外す、buildApplyPayload は expected.keywords に updatedAt を必須で入れる。2.6 の loadImportSnapshot は keywords の updated_at を取得する。
+- 2.5: ApplyPayload はローカル DB の apply_exchange_import で互換を確認済み。expected の比較は timestamptz の一致なので、2.6 は updated_at の文字列を加工せずそのまま渡す（マイクロ秒を落とさない。Date に変換しない）。

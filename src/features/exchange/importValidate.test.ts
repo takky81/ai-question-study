@@ -3,12 +3,13 @@ import type { Keyword } from '@/features/catalog/types';
 import type { ImportFileV1 } from './format';
 import { validateImport, type ImportSnapshot, type SnapshotQuestion } from './importValidate';
 
-const kw = (id: string, parentId: string | null, name: string): Keyword => ({
+const kw = (id: string, parentId: string | null, name: string): Keyword & { updatedAt: string } => ({
   id,
   parentId,
   name,
   sortOrder: 0,
   subjectId: 's1',
+  updatedAt: '2026-11-01T00:00:00.000Z',
 });
 
 const choices = (n: number) =>

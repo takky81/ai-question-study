@@ -5,7 +5,7 @@ import type { ImportFileV1 } from './format';
 import type { ImportSnapshot, SnapshotQuestion } from './importValidate';
 
 const kw = (id: string, parentId: string | null, name: string, updatedAt = '2026-11-01T00:00:00.000Z') =>
-  ({ id, parentId, name, sortOrder: 0, subjectId: 's1', updatedAt }) as Keyword;
+  ({ id, parentId, name, sortOrder: 0, subjectId: 's1', updatedAt }) as Keyword & { updatedAt: string };
 
 const choices = (n: number) =>
   Array.from({ length: n }, (_, i) => ({

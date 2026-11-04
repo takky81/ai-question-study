@@ -6,7 +6,7 @@ import type { ExportFlag, ImportChoice, ImportFileV1, KeywordRef } from './forma
 
 export type ImportSnapshot = {
   subject: { id: string; name: string; deleted: boolean } | null;
-  keywords: Keyword[]; // 科目の全件
+  keywords: (Keyword & { updatedAt: string })[]; // 科目の全件（updatedAt は 5.8、7.1）
   foreignKeywordIds: ReadonlySet<string>; // 参照されたが科目外・不存在の ID
   questions: Map<string, SnapshotQuestion>; // 参照された問題（削除済みを含む）
   openFlags: Map<string, ExportFlag[]>;
