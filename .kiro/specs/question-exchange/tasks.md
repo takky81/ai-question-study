@@ -32,7 +32,7 @@
   - _Boundary: supabase/seed.sql（question-exchange の節を追記のみ）_
   - _Requirements: 2.9, 8.3_
 
-- [ ] 2. コア: 出力と取込の純粋ロジック
+- [x] 2. コア: 出力と取込の純粋ロジック
 
 - [x] 2.1 (P) 出力条件の検証と変換を作る
   - 条件の既定値（フラグ条件なし、無効の問題を含めない）を作り、正答率の下限・上限の逆転、範囲外、負の出題数、種類未指定の種類条件をエラーとして返す
@@ -75,7 +75,7 @@
   - _Depends: 2.4_
   - _Requirements: 7.1, 8.3_
 
-- [ ] 2.6 入出力の API 境界を作る
+- [x] 2.6 入出力の API 境界を作る
   - 科目一覧、科目のキーワード全件、条件に一致する件数（行を返さない件数取得）を取得する
   - 出力用に、キーワード、キーワードの集計、問題、選択肢、フラグを並列に共通ページングで取り切り、1つでも失敗すれば全体を失敗させる
   - 取込用に、科目、キーワード全件、ファイルが参照する問題（削除済みを含む）・有効な選択肢・紐づけ・未解消のフラグを 100 件ずつ分けて取得し、スナップショットにする
@@ -184,3 +184,4 @@
 - 2.3: validateImport は移動後の最終状態だけで循環を判定する。2.4/2.5 は keywordMoves を移動後の深さが浅い順に並べ、途中で循環が生じないようにし、親の入れ替え（A/B）のテストを付けること。一時キーの仮 ID は tempKeywordId（`tmp:<tempKey>`）を使う。
 - 2.4: ImportSnapshot.keywords は updatedAt を持つ型に広げる（design.md 修正済み）。2.5 で importValidate.ts の型を (Keyword & { updatedAt: string })[] にし diff.ts のキャストを外す、buildApplyPayload は expected.keywords に updatedAt を必須で入れる。2.6 の loadImportSnapshot は keywords の updated_at を取得する。
 - 2.5: ApplyPayload はローカル DB の apply_exchange_import で互換を確認済み。expected の比較は timestamptz の一致なので、2.6 は updated_at の文字列を加工せずそのまま渡す（マイクロ秒を落とさない。Date に変換しない）。
+- 2.6: api.ts は UUID でない ID を問い合わせから除き、検証側で not_found として報告される。UI 層は supabase を直接呼ばず api.ts だけを使う。
