@@ -121,7 +121,7 @@
 
 - [ ] 4. コア: 問題生成 skill とフォーマット文書
 
-- [ ] 4.1 (P) フォーマット文書と取込用 JSON の例を作る
+- [x] 4.1 (P) フォーマット文書と取込用 JSON の例を作る
   - skill の参照文書として、出力用・取込用の全項目（名前、型、必須・任意、意味）、キーワード参照、選択肢の全体記述と ID の扱い、一時キーの規則、表現できない操作を英語で書く
   - すべての操作を1回以上含む取込用 JSON の例を、内容を日本語で作る
   - 文書にフォーマット識別子・バージョン・全項目名が現れること、例のファイルが取込の検証を通ることをユニットテストで照合し、テストが通る
@@ -188,3 +188,4 @@
 - 3.1: ExchangePage は exportPanel / renderImportPanel({ onHoldingChange }) の差し込み口を持つ。ルートは props なしで描画するため、3.2 と 3.4 で ExchangePage の中に実際のパネルを組み込むこと（3.4 の ImportPanel はファイルかプレビューを持つ間 onHoldingChange(true)）。ExchangeConfirmDialog は exchange 独自の `<dialog>`（他 feature から import しない）。
 - 3.3: 修正される問題の紐づくキーワードの変更後パスは、祖先が改名・移動されると古い表記になる（5.2）。diff.ts が afterNodes から修正分の変更後パスを返し、DiffPreview はそれを使うよう 3.4 で直す。エラーは text-text＋アイコン＋「エラー」、警告は text-warn＋アイコン＋「警告」で区別する。
 - 3.4: 適用前の確認は警告のチェックボックスだけ（ExchangeConfirmDialog は離脱用）。diff.ts の QuestionChange に afterKeywordPaths を追加し、DiffPreview はそれを使う。
+- 4.1: フォーマット文書は英語（.claude/skills は英語の方針、design どおり）で、問題の内容は日本語。IMPORT_FIELD_NAMES / EXPORT_FIELD_NAMES は format.ts に置き、型レベルで全項目と一致させる。example-import.json は架空の ID を使う例示用。

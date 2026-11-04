@@ -87,3 +87,36 @@ export type ImportFileV1 = {
     disable: { id: string; reason: string | null }[];
   };
 };
+
+// ---- 項目名の一覧（フォーマット文書との照合用、3.9） ----
+
+type Elem<T> = T extends readonly (infer U)[] ? Elem<U> : T;
+/** T に現れるすべてのプロパティ名（配列要素・入れ子・共用体の各分岐を含む）。 */
+type DeepKeys<T> =
+  Elem<T> extends infer U
+    ? U extends object
+      ? { [K in keyof U & string]-?: K | DeepKeys<U[K]> }[keyof U & string]
+      : never
+    : never;
+
+/** 引数の配列が型の全プロパティ名をちょうど網羅していることを型で保証する。 */
+const fieldNamesOf =
+  <T>() =>
+  <const A extends readonly DeepKeys<T>[]>(names: A & ([DeepKeys<T>] extends [A[number]] ? unknown : never)): A =>
+    names;
+
+export const IMPORT_FIELD_NAMES = fieldNamesOf<ImportFileV1>()([
+  'format', 'version', 'subjectId', 'basedOnExportedAt',
+  'keywords', 'add', 'rename', 'move', 'tempKey', 'parent', 'name', 'id',
+  'questions', 'update', 'create', 'disable', 'reason',
+  'kind', 'stem', 'explanation', 'choices', 'body', 'isCorrect',
+]);
+
+export const EXPORT_FIELD_NAMES = fieldNamesOf<ExportFileV1>()([
+  'format', 'version', 'exportedAt', 'subject', 'id', 'name',
+  'conditions', 'keywordId', 'flag', 'flagTypes', 'correctRateMin', 'correctRateMax',
+  'attemptMin', 'attemptMax', 'attempted', 'includeDisabled',
+  'keywords', 'parentId', 'sortOrder', 'path', 'stats', 'questionCount', 'attemptCount', 'correctCount', 'correctRate',
+  'questions', 'kind', 'stem', 'explanation', 'keywordIds', 'status', 'disabledReason', 'updatedAt',
+  'choices', 'body', 'isCorrect', 'openFlags', 'note', 'createdAt', 'retention',
+]);

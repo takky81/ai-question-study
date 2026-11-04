@@ -1,0 +1,55 @@
+{
+  "format": "ai-question-study/import",
+  "version": 1,
+  "subjectId": "11111111-1111-4111-8111-111111111111",
+  "basedOnExportedAt": "2026-11-01T09:00:00.000Z",
+  "keywords": {
+    "add": [
+      { "tempKey": "kw-container", "parent": { "id": "22222222-2222-4222-8222-222222222201" }, "name": "コンテナ" },
+      { "tempKey": "kw-k8s", "parent": { "tempKey": "kw-container" }, "name": "Kubernetes" }
+    ],
+    "rename": [
+      { "id": "22222222-2222-4222-8222-222222222202", "name": "仮想化技術" }
+    ],
+    "move": [
+      { "id": "22222222-2222-4222-8222-222222222203", "parent": { "tempKey": "kw-container" } }
+    ]
+  },
+  "questions": {
+    "update": [
+      {
+        "id": "33333333-3333-4333-8333-333333333301",
+        "kind": "feature",
+        "stem": "ハイパーバイザ型の仮想化の特徴として正しいものはどれか。",
+        "explanation": "ハイパーバイザ型はハードウェア上で直接ハイパーバイザが動き、ホスト OS（Operating System）を必要としない。",
+        "keywords": [{ "id": "22222222-2222-4222-8222-222222222202" }],
+        "choices": [
+          { "id": "44444444-4444-4444-8444-444444444401", "body": "ホスト OS を必要としない", "explanation": "ハイパーバイザがハードウェア上で直接動作する。", "isCorrect": true },
+          { "id": "44444444-4444-4444-8444-444444444402", "body": "ゲスト OS を必要としない", "explanation": "仮想マシンごとにゲスト OS が必要である。", "isCorrect": false },
+          { "id": "44444444-4444-4444-8444-444444444403", "body": "アプリケーション単位で隔離する", "explanation": "アプリケーション単位の隔離はコンテナ型の特徴である。", "isCorrect": false },
+          { "body": "物理サーバを1台しか使えない", "explanation": "台数の制約は仮想化の方式とは関係がない。", "isCorrect": false }
+        ]
+      }
+    ],
+    "create": [
+      {
+        "tempKey": "q-k8s",
+        "kind": "keyword",
+        "stem": "コンテナのデプロイやスケーリングを自動化するオーケストレーションツールはどれか。",
+        "explanation": "Kubernetes はコンテナの配置、スケーリング、自己修復を自動化する。",
+        "keywords": [{ "tempKey": "kw-k8s" }],
+        "choices": [
+          { "body": "Kubernetes", "explanation": "コンテナオーケストレーションの代表的なツールである。", "isCorrect": true },
+          { "body": "Docker Compose", "explanation": "単一ホスト上で複数のコンテナを定義・起動するツールである。", "isCorrect": false },
+          { "body": "Ansible", "explanation": "サーバの構成管理を自動化するツールである。", "isCorrect": false },
+          { "body": "Terraform", "explanation": "IaC（Infrastructure as Code）でインフラを構築するツールである。", "isCorrect": false },
+          { "body": "Contaria", "explanation": "実在しない語である。", "isCorrect": false },
+          { "body": "Podweaver", "explanation": "実在しない語である。", "isCorrect": false }
+        ]
+      }
+    ],
+    "disable": [
+      { "id": "33333333-3333-4333-8333-333333333302", "reason": "1問で2つの情報を問うため、分割した問題に置き換える" }
+    ]
+  }
+}
