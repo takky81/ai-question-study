@@ -1,6 +1,6 @@
 // 学習統計のドメイン型（2.1、3.1）。DB の metric 値との変換は api.ts で行う。
-export type StatsTarget = "question" | "keyword";
-export type StatsMetric = "correctRate" | "attemptCount";
+export type StatsTarget = 'question' | 'keyword';
+export type StatsMetric = 'correctRate' | 'attemptCount';
 
 export type HistogramBin = { bin: number; label: string; count: number };
 export type Histogram = {
@@ -9,10 +9,7 @@ export type Histogram = {
   unattempted: number | null; // correctRate のみ。attemptCount は null
   total: number; // 区間の件数の合計 + unattempted
 };
-export type StatsHistograms = Record<
-  StatsTarget,
-  Record<StatsMetric, Histogram>
->;
+export type StatsHistograms = Record<StatsTarget, Record<StatsMetric, Histogram>>;
 
 export type BinItem = {
   itemId: string;
