@@ -101,7 +101,7 @@
   - _Depends: 2.1, 2.6_
   - _Requirements: 1.1, 1.2, 1.8, 1.9, 1.10, 2.1, 2.10, 10.2, 10.4_
 
-- [ ] 3.3 (P) 検証結果と差分プレビューの表示を作る
+- [x] 3.3 (P) 検証結果と差分プレビューの表示を作る
   - エラーと警告を分けて件数と一覧を出し、各行の位置を人が読める表記（「問題の修正 4件目 / 選択肢 2 / 本文」など）で示す
   - 件数の要約、キーワードの変更前後の階層パス、修正の変わった項目だけの前後比較（選択肢の追加・削除・変更・並べ替えの印付き）、新規の全内容と階層パス、無効化と理由、変更なしの問題（折りたたみ）、解消予定のフラグを表示する
   - 正解の選択肢に共通の正解の色と印を付け、PC 幅では前後比較を2列、モバイルでは縦に並べる
@@ -186,3 +186,4 @@
 - 2.5: ApplyPayload はローカル DB の apply_exchange_import で互換を確認済み。expected の比較は timestamptz の一致なので、2.6 は updated_at の文字列を加工せずそのまま渡す（マイクロ秒を落とさない。Date に変換しない）。
 - 2.6: api.ts は UUID でない ID を問い合わせから除き、検証側で not_found として報告される。UI 層は supabase を直接呼ばず api.ts だけを使う。
 - 3.1: ExchangePage は exportPanel / renderImportPanel({ onHoldingChange }) の差し込み口を持つ。ルートは props なしで描画するため、3.2 と 3.4 で ExchangePage の中に実際のパネルを組み込むこと（3.4 の ImportPanel はファイルかプレビューを持つ間 onHoldingChange(true)）。ExchangeConfirmDialog は exchange 独自の `<dialog>`（他 feature から import しない）。
+- 3.3: 修正される問題の紐づくキーワードの変更後パスは、祖先が改名・移動されると古い表記になる（5.2）。diff.ts が afterNodes から修正分の変更後パスを返し、DiffPreview はそれを使うよう 3.4 で直す。エラーは text-text＋アイコン＋「エラー」、警告は text-warn＋アイコン＋「警告」で区別する。
