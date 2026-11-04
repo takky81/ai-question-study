@@ -86,7 +86,7 @@
 
 - [ ] 3. コア: 入出力画面
 
-- [ ] 3.1 入出力画面の枠と離脱確認を作る
+- [x] 3.1 入出力画面の枠と離脱確認を作る
   - 「出力」「取込」のタブを持つ画面を作り、タブを切り替えても取込の状態を保持する
   - 取込ファイルやプレビューを保持している間、画面内の遷移と画面の離脱を確認ダイアログで止める。ダイアログは確定以外に初期フォーカスし、Esc で閉じる
   - 390px 幅で横スクロールが出ず、未保存のプレビューがある状態で別の画面へ移ろうとすると確認が表示される
@@ -185,3 +185,4 @@
 - 2.4: ImportSnapshot.keywords は updatedAt を持つ型に広げる（design.md 修正済み）。2.5 で importValidate.ts の型を (Keyword & { updatedAt: string })[] にし diff.ts のキャストを外す、buildApplyPayload は expected.keywords に updatedAt を必須で入れる。2.6 の loadImportSnapshot は keywords の updated_at を取得する。
 - 2.5: ApplyPayload はローカル DB の apply_exchange_import で互換を確認済み。expected の比較は timestamptz の一致なので、2.6 は updated_at の文字列を加工せずそのまま渡す（マイクロ秒を落とさない。Date に変換しない）。
 - 2.6: api.ts は UUID でない ID を問い合わせから除き、検証側で not_found として報告される。UI 層は supabase を直接呼ばず api.ts だけを使う。
+- 3.1: ExchangePage は exportPanel / renderImportPanel({ onHoldingChange }) の差し込み口を持つ。ルートは props なしで描画するため、3.2 と 3.4 で ExchangePage の中に実際のパネルを組み込むこと（3.4 の ImportPanel はファイルかプレビューを持つ間 onHoldingChange(true)）。ExchangeConfirmDialog は exchange 独自の `<dialog>`（他 feature から import しない）。
