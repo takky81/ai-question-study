@@ -157,7 +157,7 @@
   - _Depends: 1.4, 5.1_
   - _Requirements: 1.3, 1.4, 1.5, 1.6, 1.7, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9_
 
-- [ ] 6.2 取込・競合・フラグ解消の E2E を作る
+- [x] 6.2 取込・競合・フラグ解消の E2E を作る
   - 全操作を含むファイルを取り込み、プレビューの件数・差分を確認して適用し、ID 不変、外された選択肢の履歴、新規 ID の割り当てを DB で確認する
   - 修正した問題のフラグだけが解消済みになり、変更なし・無効化・新規の問題のフラグが未解消のまま残ることを確認する
   - プレビュー後に別タブで問題を手動編集してから適用すると何も変わらず、再検証で新しい差分が出ることを確認する
@@ -191,3 +191,4 @@
 - 4.1: フォーマット文書は英語（.claude/skills は英語の方針、design どおり）で、問題の内容は日本語。IMPORT_FIELD_NAMES / EXPORT_FIELD_NAMES は format.ts に置き、型レベルで全項目と一致させる。example-import.json は架空の ID を使う例示用。
 - 4.2: question-authoring skill はドライラン（seed 科目の出力 → 修正2問・新規2問の取込 JSON）で parseImportFile ok、validateImport エラー0・警告0を確認済み。skillDoc.test.ts で SKILL.md の契約を検査する。
 - 6.1: e2e/exchange.spec.ts は共通の補助（loadEnv / ownerClient / desktopOnly）を先頭に置き、describe ごとに desktopOnly() を付ける。出力の E2E は seed を読むだけ。
+- 6.2: 取込 E2E は実行ごとに exchange-imp- 接頭辞の科目を作って afterAll で消す（seed は触らない）。23505 は制約名で文言を分ける（keywords_sibling_name_key はキーワード名、choices_question_one_correct_key は正解1つ、それ以外は汎用）。
