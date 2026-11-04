@@ -100,3 +100,125 @@ revoke all on function stats_private.target_items(text, uuid, uuid) from public,
 grant execute on function stats_private.rate_bin(integer, integer) to authenticated;
 grant execute on function stats_private.count_bin(integer) to authenticated;
 grant execute on function stats_private.target_items(text, uuid, uuid) to authenticated;
+
+-- ============================================================
+-- 結果行の複合型
+-- ============================================================
+create type public.stats_histogram_row as (
+  target text,
+  metric text,
+  bin integer,
+  item_count integer
+);
+
+create type public.stats_bin_item as (
+  item_id uuid,
+  attempt_count integer,
+  correct_count integer,
+  correct_rate double precision,
+  question_count integer,
+  stem text
+);
+
+-- ============================================================
+-- 区間ごとの件数（RPC）
+-- ============================================================
+
+-- 設問・キーワードそれぞれについて、正答率は -1〜9 の全区間、出題回数は 0 から最大の区間までの全区間を
+-- 0 件の区間も含めて返す。
+create function public.stats_histograms(p_subject_id uuid, p_keyword_id uuid)
+returns setof public.stats_histogram_row
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  with targets (target) as (
+    values ('question'::text), ('keyword'::text)
+  ),
+  items as (
+    select
+      t.target,
+      stats_private.rate_bin(i.correct_count, i.attempt_count) as rate_bin,
+      stats_private.count_bin(i.attempt_count) as count_bin
+    from targets t
+    cross join lateral stats_private.target_items(t.target, p_subject_id, p_keyword_id) as i
+  ),
+  bins (target, metric, bin) as (
+    select t.target, 'correct_rate'::text, b
+    from targets t
+    cross join pg_catalog.generate_series(-1, 9) as b
+    union all
+    select t.target, 'attempt_count'::text, b
+    from targets t
+    cross join lateral pg_catalog.generate_series(
+      0,
+      coalesce((select max(it.count_bin) from items it where it.target = t.target), 0)
+    ) as b
+  )
+  select
+    bn.target,
+    bn.metric,
+    bn.bin,
+    (
+      select count(*)::integer
+      from items it
+      where it.target = bn.target
+        and (case when bn.metric = 'correct_rate' then it.rate_bin else it.count_bin end) = bn.bin
+    )
+  from bins bn
+  order by bn.target, bn.metric, bn.bin;
+$$;
+
+-- ============================================================
+-- 区間内の一覧（RPC）
+-- ============================================================
+
+-- 件数と同じ target_items と区間関数で振り分け、指定区間の行を item_id 順に返す。設問には問題文を付ける。
+create function public.stats_bin_items(
+  p_target text,
+  p_metric text,
+  p_bin integer,
+  p_subject_id uuid,
+  p_keyword_id uuid
+)
+returns setof public.stats_bin_item
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+begin
+  if p_target is null or p_target not in ('question', 'keyword') then
+    raise exception using errcode = 'P0001', message = 'invalid_stats_target';
+  end if;
+  if p_metric is null or p_metric not in ('correct_rate', 'attempt_count') then
+    raise exception using errcode = 'P0001', message = 'invalid_stats_metric';
+  end if;
+
+  return query
+  select
+    i.item_id,
+    i.attempt_count,
+    i.correct_count,
+    i.correct_rate,
+    i.question_count,
+    sq.stem
+  from stats_private.target_items(p_target, p_subject_id, p_keyword_id) as i
+  left join public.servable_questions sq
+    on p_target = 'question'
+    and sq.id = i.item_id
+  where (
+    case
+      when p_metric = 'correct_rate' then stats_private.rate_bin(i.correct_count, i.attempt_count)
+      else stats_private.count_bin(i.attempt_count)
+    end
+  ) = p_bin
+  order by i.item_id;
+end;
+$$;
+
+revoke all on function public.stats_histograms(uuid, uuid) from public, anon;
+revoke all on function public.stats_bin_items(text, text, integer, uuid, uuid) from public, anon;
+grant execute on function public.stats_histograms(uuid, uuid) to authenticated;
+grant execute on function public.stats_bin_items(text, text, integer, uuid, uuid) to authenticated;
