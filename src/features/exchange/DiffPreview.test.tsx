@@ -62,6 +62,7 @@ const DIFF: ImportDiff = {
           { body: '新しい選択肢', explanation: 'eD', isCorrect: false },
         ],
       },
+      afterKeywordPaths: [['データベース', 'TCP']],
       flagsToResolve: [{ flag: 'defective', note: '正解が曖昧', createdAt: '2026-01-02T00:00:00Z' }],
       updatedSinceExport: true,
     },
@@ -162,5 +163,24 @@ describe('DiffPreview', () => {
     expect(details).not.toBeNull();
     expect(details).not.toHaveAttribute('open');
     expect(screen.getByRole('region', { name: '問題の修正' })).not.toHaveTextContent('q9');
+  });
+
+  it('修正の紐づくキーワードは祖先の改名後の階層パスで出す（5.2）', () => {
+    const q = DIFF.updated[0]!;
+    const diff: ImportDiff = {
+      ...DIFF,
+      updated: [
+        {
+          ...q,
+          fields: ['keywords'],
+          after: { ...q.after, keywords: [{ id: 'k2' }] },
+          afterKeywordPaths: [['通信', 'TCP']],
+        },
+      ],
+    };
+    render(<DiffPreview diff={diff} keywords={KEYWORDS} />);
+    const upd = screen.getByRole('region', { name: '問題の修正' });
+    expect(within(upd).getByText('ネットワーク / TCP')).toBeInTheDocument();
+    expect(within(upd).getByText('通信 / TCP')).toBeInTheDocument();
   });
 });

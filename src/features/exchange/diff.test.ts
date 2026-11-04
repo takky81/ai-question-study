@@ -197,6 +197,20 @@ describe('computeImportDiff', () => {
     }
   });
 
+  it('修正の紐づくキーワードの変更後パスは祖先の改名・移動を反映する（5.2）', () => {
+    const d = computeImportDiff(
+      file({
+        keywords: { add: [{ tempKey: 'k1', parent: { id: 'c' }, name: 'N' }], rename: [{ id: 'a', name: 'A2' }] },
+        questions: { update: [update('q1', { keywords: [{ id: 'b' }, { tempKey: 'k1' }] })] },
+      }),
+      snapshot(),
+    );
+    expect(d.updated[0]?.afterKeywordPaths).toEqual([
+      ['ルート', 'A2', 'B'],
+      ['ルート', 'C', 'N'],
+    ]);
+  });
+
   it('新規は階層パス付き、無効化はすでに無効なら件数に入れない', () => {
     const d = computeImportDiff(
       file({

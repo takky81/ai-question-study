@@ -17,6 +17,8 @@ export type QuestionChange = {
   choices: ChoiceChange[];
   before: SnapshotQuestion;
   after: ImportQuestionBody;
+  /** 変更後の紐づくキーワードの階層パス（祖先の改名・移動、追加を反映した変更後の木で求める。5.2） */
+  afterKeywordPaths: string[][];
   flagsToResolve: ExportFlag[];
   updatedSinceExport: boolean;
 };
@@ -175,6 +177,7 @@ export function computeImportDiff(file: ImportFileV1, snapshot: ImportSnapshot):
       choices: choiceChanges(before.choices, u.choices),
       before,
       after,
+      afterKeywordPaths: u.keywords.map((ref) => names(afterNodes, refId(ref))),
       flagsToResolve: snapshot.openFlags.get(u.id) ?? [],
       updatedSinceExport,
     });

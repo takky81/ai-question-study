@@ -7,7 +7,6 @@ import type { QuestionKind } from '@/features/catalog/types';
 import { keywordPath, type KeywordNode } from '@/lib/keywordTree';
 
 import type { ChoiceChange, ImportDiff, KeywordChange, QuestionChange } from './diff';
-import type { KeywordRef } from './format';
 
 type Props = {
   diff: ImportDiff;
@@ -228,15 +227,7 @@ function UpdatedQuestion({
 
 export function DiffPreview({ diff, keywords }: Props): ReactElement {
   const { counts } = diff;
-  const afterPathById = new Map<string, string[]>();
-  const afterPathByTemp = new Map<string, string[]>();
-  for (const k of diff.keywords) {
-    if (k.type === 'added') afterPathByTemp.set(k.tempKey, k.afterPath);
-    else afterPathById.set(k.id, k.afterPath);
-  }
   const currentPath = (id: string) => keywordPath(keywords, id).map((n) => n.name);
-  const refPath = (ref: KeywordRef) =>
-    'id' in ref ? (afterPathById.get(ref.id) ?? currentPath(ref.id)) : (afterPathByTemp.get(ref.tempKey) ?? []);
 
   const summary: [string, number][] = [
     ['キーワードの追加', counts.keywordsAdded],
@@ -275,7 +266,7 @@ export function DiffPreview({ diff, keywords }: Props): ReactElement {
             order={i + 1}
             change={q}
             beforePaths={q.fields.includes('keywords') ? q.before.keywordIds.map(currentPath) : []}
-            afterPaths={q.fields.includes('keywords') ? q.after.keywords.map(refPath) : []}
+            afterPaths={q.fields.includes('keywords') ? q.afterKeywordPaths : []}
           />
         ))}
       </Section>
