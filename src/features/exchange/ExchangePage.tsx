@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useState, type ReactElement, type ReactN
 import { useBlocker } from 'react-router';
 
 import { ExchangeConfirmDialog } from './ExchangeConfirmDialog';
+import { ExportPanel } from './ExportPanel';
 
 /** 取込パネルへ渡す口。取込ファイルかプレビューを保持している間は true を通知する（10.6） */
 export type ImportPanelSlotProps = {
@@ -9,7 +10,7 @@ export type ImportPanelSlotProps = {
 };
 
 type Props = {
-  /** 出力パネル（3.2 の ExportPanel） */
+  /** 出力パネル（既定は ExportPanel） */
   exportPanel?: ReactNode;
   /** 取込パネル（3.4 の ImportPanel） */
   renderImportPanel?: (props: ImportPanelSlotProps) => ReactNode;
@@ -26,7 +27,7 @@ const TABS: { key: Tab; label: string }[] = [
  * 入出力画面。「出力」「取込」のタブを持ち、非表示のパネルも描画したままにしてタブの切替で状態を保持する。
  * 取込の保持中は画面内の遷移と画面の離脱を確認する（10.3、10.4、10.6）。
  */
-export function ExchangePage({ exportPanel = null, renderImportPanel }: Props): ReactElement {
+export function ExchangePage({ exportPanel = <ExportPanel />, renderImportPanel }: Props): ReactElement {
   const baseId = useId();
   const tabId = (t: Tab) => `${baseId}-tab-${t}`;
   const panelId = (t: Tab) => `${baseId}-panel-${t}`;
