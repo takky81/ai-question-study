@@ -150,7 +150,7 @@
 
 - [ ] 6. 検証: E2E
 
-- [ ] 6.1 出力の E2E を作る
+- [x] 6.1 出力の E2E を作る
   - 途中のキーワードの範囲・フラグ・正答率の条件で出力し、ダウンロードしたファイルに配下の問題・未解消のフラグだけが含まれ、既定で無効の問題がなく、「含める」で状態付きで含まれることを確認する
   - 1,200 問・選択肢 4,800 件の seed で出力し、件数と ID が欠落・重複なく一致することを確認する
   - 直列実行の E2E が成功する
@@ -190,3 +190,4 @@
 - 3.4: 適用前の確認は警告のチェックボックスだけ（ExchangeConfirmDialog は離脱用）。diff.ts の QuestionChange に afterKeywordPaths を追加し、DiffPreview はそれを使う。
 - 4.1: フォーマット文書は英語（.claude/skills は英語の方針、design どおり）で、問題の内容は日本語。IMPORT_FIELD_NAMES / EXPORT_FIELD_NAMES は format.ts に置き、型レベルで全項目と一致させる。example-import.json は架空の ID を使う例示用。
 - 4.2: question-authoring skill はドライラン（seed 科目の出力 → 修正2問・新規2問の取込 JSON）で parseImportFile ok、validateImport エラー0・警告0を確認済み。skillDoc.test.ts で SKILL.md の契約を検査する。
+- 6.1: e2e/exchange.spec.ts は共通の補助（loadEnv / ownerClient / desktopOnly）を先頭に置き、describe ごとに desktopOnly() を付ける。出力の E2E は seed を読むだけ。
