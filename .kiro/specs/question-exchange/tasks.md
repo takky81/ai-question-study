@@ -119,7 +119,7 @@
   - _Depends: 2.5, 2.6, 3.1, 3.3_
   - _Requirements: 4.1, 4.11, 5.9, 5.10, 6.6, 6.7, 6.8, 7.3, 7.4_
 
-- [ ] 4. コア: 問題生成 skill とフォーマット文書
+- [x] 4. コア: 問題生成 skill とフォーマット文書
 
 - [x] 4.1 (P) フォーマット文書と取込用 JSON の例を作る
   - skill の参照文書として、出力用・取込用の全項目（名前、型、必須・任意、意味）、キーワード参照、選択肢の全体記述と ID の扱い、一時キーの規則、表現できない操作を英語で書く
@@ -129,7 +129,7 @@
   - _Depends: 1.3_
   - _Requirements: 3.9, 9.6_
 
-- [ ] 4.2 問題生成 skill を作る
+- [x] 4.2 問題生成 skill を作る
   - 読み書きとファイル検索だけを許可したツール構成で、本文を英語で書く。データベース・ネットワーク・シェルの操作を持たず、取込は所有者に任せる
   - 手順として、フォーマット文書と `product.md` の「問題作成の原則」「問題フラグ」を読み、出力 JSON の種類・バージョンが対応外なら書かずに理由を報告することを定める
   - フラグの種類ごとの対処方針、集計値は優先度の参考にだけ使い取込用 JSON に書かないこと、生成内容を日本語で書くこと、意味が変わる選択肢は ID なしで書くことを定める
@@ -189,3 +189,4 @@
 - 3.3: 修正される問題の紐づくキーワードの変更後パスは、祖先が改名・移動されると古い表記になる（5.2）。diff.ts が afterNodes から修正分の変更後パスを返し、DiffPreview はそれを使うよう 3.4 で直す。エラーは text-text＋アイコン＋「エラー」、警告は text-warn＋アイコン＋「警告」で区別する。
 - 3.4: 適用前の確認は警告のチェックボックスだけ（ExchangeConfirmDialog は離脱用）。diff.ts の QuestionChange に afterKeywordPaths を追加し、DiffPreview はそれを使う。
 - 4.1: フォーマット文書は英語（.claude/skills は英語の方針、design どおり）で、問題の内容は日本語。IMPORT_FIELD_NAMES / EXPORT_FIELD_NAMES は format.ts に置き、型レベルで全項目と一致させる。example-import.json は架空の ID を使う例示用。
+- 4.2: question-authoring skill はドライラン（seed 科目の出力 → 修正2問・新規2問の取込 JSON）で parseImportFile ok、validateImport エラー0・警告0を確認済み。skillDoc.test.ts で SKILL.md の契約を検査する。
