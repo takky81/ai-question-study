@@ -367,7 +367,7 @@ test.describe('範囲選択から終了まで', () => {
     await expect(statsBar(page)).toHaveText('正答 0 / 出題 1（0%）');
     await waitSaved(page);
 
-    // 保存ボタンはなく、チェックの操作だけで記録され、外すと消える（7.2、7.4、7.9）
+    // 保存ボタンはなく、チェックの操作だけで記録され、外すと消える（7.2、7.4、7.10）
     const form = page.getByRole('region', { name: '問題フラグ' });
     const lowValue = page.getByRole('checkbox', { name: '問う価値が低い' });
     const defective = page.getByRole('checkbox', { name: /^問題不備/ });
@@ -382,7 +382,7 @@ test.describe('範囲選択から終了まで', () => {
     await flagsOf().toEqual(['low_value']);
     await expect(form.getByText('保存しました')).toBeVisible();
 
-    // 自由入力は blur で記録され、同じ内容の再 blur では保存要求を出さない（7.2、7.10）
+    // 自由入力は blur で記録され、同じ内容の再 blur では保存要求を出さない（7.5）
     await comment.fill('  選択肢が曖昧  ');
     await comment.blur();
     await flagsOf().toEqual(['comment:選択肢が曖昧', 'low_value']);
@@ -393,12 +393,12 @@ test.describe('範囲選択から終了まで', () => {
     await flagsOf().toEqual(['comment:選択肢が曖昧', 'defective', 'low_value']);
     expect(flagRequests).toBe(before + 1);
 
-    // 空白だけで blur するとコメントは消える（7.5）
+    // 空白だけで blur するとコメントは消える（7.9）
     await comment.fill('  　 ');
     await comment.blur();
     await flagsOf().toEqual(['defective', 'low_value']);
 
-    // 再読み込み後、同じ問題を解くと選択済みで表示される（7.7）
+    // 再読み込み後、同じ問題を解くと選択済みで表示される（7.3）
     await page.reload();
     await expect(page.getByRole('heading', { name: '旗問', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '旗問の正解', exact: true }).click();
@@ -408,7 +408,7 @@ test.describe('範囲選択から終了まで', () => {
     await expect(defective).toBeChecked();
     await expect(comment).toHaveValue('');
 
-    // textarea にフォーカスしたまま「次へ」を押しても入力が記録されてから遷移する（7.6、7.10）
+    // textarea にフォーカスしたまま「次へ」を押しても入力が記録されてから遷移する（7.5）
     await comment.fill('すぐ次へ');
     await expect(comment).toBeFocused();
     await nextButton(page).click();

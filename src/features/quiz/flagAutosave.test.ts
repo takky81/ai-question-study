@@ -86,6 +86,21 @@ describe('createFlagSaver', () => {
     expect(listener).toHaveBeenCalled();
   });
 
+  it('失敗後に保存済みの状態へ戻すと、その値を送って失敗が解消し flush が true になる', async () => {
+    const { calls, save } = fakeSave();
+    const saver = createFlagSaver({ flags: [], comment: null }, save);
+    saver.setFlags(['low_value']);
+    calls[0]!.reject(new Error('x'));
+    await tick();
+    saver.setFlags([]);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]!.snapshot).toEqual({ flags: [], comment: null });
+    calls[1]!.resolve();
+    await tick();
+    expect(saver.getStatus()).toEqual({ kind: 'saved' });
+    await expect(saver.flush()).resolves.toBe(true);
+  });
+
   it('retry は最新の値を送る', async () => {
     const { calls, save } = fakeSave();
     const saver = createFlagSaver({ flags: [], comment: null }, save);
