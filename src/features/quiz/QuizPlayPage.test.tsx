@@ -24,7 +24,15 @@ const Q1 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const Q2 = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
 function cand(id: string, createdAt: string): QuizCandidate {
-  return { questionId: id, createdAt, attemptCount: 0, correctCount: 0, correctRate: null, retention: null, lastAnsweredAt: null };
+  return {
+    questionId: id,
+    createdAt,
+    attemptCount: 0,
+    correctCount: 0,
+    correctRate: null,
+    retention: null,
+    lastAnsweredAt: null,
+  };
 }
 
 function question(id: string, stem: string): QuizQuestion {
@@ -78,11 +86,15 @@ let uuid = 0;
 beforeEach(() => {
   vi.resetAllMocks();
   uuid = 0;
-  vi.spyOn(crypto, 'randomUUID').mockImplementation(() => `00000000-0000-4000-8000-00000000000${++uuid}` as `${string}-${string}-${string}-${string}-${string}`);
+  vi.spyOn(crypto, 'randomUUID').mockImplementation(
+    () => `00000000-0000-4000-8000-00000000000${++uuid}` as `${string}-${string}-${string}-${string}-${string}`,
+  );
   m.listQuizCandidates.mockResolvedValue([cand(Q1, '2026-01-01T00:00:00Z'), cand(Q2, '2026-01-02T00:00:00Z')]);
   m.listSubjectKeywords.mockResolvedValue([]);
   m.getQuizQuestion.mockImplementation(async (id) => (id === Q1 ? question(Q1, '問1') : question(Q2, '問2')));
-  m.recordAnswer.mockImplementation(async (input) => result(input.choiceId?.endsWith('c1') ?? false, `${input.questionId}-c1`));
+  m.recordAnswer.mockImplementation(async (input) =>
+    result(input.choiceId?.endsWith('c1') ?? false, `${input.questionId}-c1`),
+  );
   m.listOpenFlags.mockResolvedValue({ flags: [], comment: null });
   m.saveQuestionFlags.mockResolvedValue();
 });
@@ -102,7 +114,7 @@ describe('QuizPlayPage', () => {
     expect(next).toBeDisabled();
     await user.click(screen.getByRole('button', { name: `${s1}正解` }));
     expect(await screen.findByText(`${s1}の解説`)).toBeInTheDocument();
-    await screen.findByRole('button', { name: 'フラグを保存' });
+    await screen.findByLabelText('問う価値が低い');
     await waitFor(() => expect(next).toBeEnabled());
     await user.click(next);
 

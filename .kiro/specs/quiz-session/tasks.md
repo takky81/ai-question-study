@@ -169,7 +169,7 @@
   - _Boundary: ChoiceList_
   - _Requirements: 4.3, 5.9_
 
-- [ ] 6.3 フラグ入力を自動保存の表示に変える
+- [x] 6.3 フラグ入力を自動保存の表示に変える
   - 先に `FlagForm.test.tsx` を更新し、チェックの変更で `onChangeFlags` が呼ばれる、入力中は `onCommitComment` が呼ばれず blur で呼ばれる、保存ボタンがなく Enter で送信しない、`saving`／`saved` が `role="status"` に出る、`failed` で入力を保持して `role="alert"` と再試行が出ることを、失敗するテストとして確認する
   - 保存ボタンと `form` の submit を廃止し、props を `onChangeFlags`、`onCommitComment`、`status`、`onRetry` に置き換える。保存中もチェックボックスは操作可能にする
   - `FlagForm.test.tsx` がすべて通り、既存の選択済みの初期表示のテストも通る

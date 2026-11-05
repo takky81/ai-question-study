@@ -1,6 +1,15 @@
 // 解答画面: 出題・解答・記録・次へ・終了のオーケストレーション（1.7、2.4、2.5、3.3〜3.5、5.8、7.7、10.2、10.5、10.6）。
 // 進行は sessionReducer に委ね、I/O は各フェーズの effect で行う。問題や記録の切り替わり後・アンマウント後に届いた古い応答は破棄する。
-import { useEffect, useId, useMemo, useReducer, useRef, useState, type ReactElement } from 'react';
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactElement,
+} from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import type { KeywordNode } from '@/lib/keywordTree';
 import { AnswerFeedback } from './AnswerFeedback';
@@ -14,6 +23,7 @@ import {
 } from './api';
 import { ChoiceList } from './ChoiceList';
 import { FlagForm } from './FlagForm';
+import { createFlagSaver } from './flagAutosave';
 import type { CheckboxFlagId } from './flags';
 import { QuestionStatsBar } from './QuestionStatsBar';
 import { parseRangeParams, toRangeParams } from './range';
@@ -181,7 +191,11 @@ export function QuizPlayPage(): ReactElement | null {
           出題
         </h2>
         {state.phase !== 'finished' && (
-          <button type="button" onClick={() => void navigate(`/quiz?${rangeKey}`)} className={`${BUTTON} border-border`}>
+          <button
+            type="button"
+            onClick={() => void navigate(`/quiz?${rangeKey}`)}
+            className={`${BUTTON} border-border`}
+          >
             終了
           </button>
         )}
@@ -255,11 +269,11 @@ export function QuizPlayPage(): ReactElement | null {
             ) : flags === null ? (
               <p className="text-text-muted">フラグを読み込み中…</p>
             ) : (
-              <FlagForm
+              <AutosaveFlagForm
                 key={current.id}
+                questionId={current.id}
                 initialFlags={flags.flags}
                 initialComment={flags.comment}
-                onSave={(f, comment) => saveQuestionFlags(current.id, f, comment)}
               />
             ))}
           <div>
@@ -275,5 +289,33 @@ export function QuizPlayPage(): ReactElement | null {
         </>
       )}
     </section>
+  );
+}
+
+// 6.3 の props 変更に合わせた暫定のつなぎ。6.4 で自動保存キューを QuizPlayPage に持ち上げ、遷移前に flush する。
+function AutosaveFlagForm({
+  questionId,
+  initialFlags,
+  initialComment,
+}: {
+  questionId: string;
+  initialFlags: CheckboxFlagId[];
+  initialComment: string | null;
+}) {
+  const [saver] = useState(() =>
+    createFlagSaver({ flags: initialFlags, comment: initialComment }, (s) =>
+      saveQuestionFlags(questionId, s.flags, s.comment ?? ''),
+    ),
+  );
+  const status = useSyncExternalStore(saver.subscribe, saver.getStatus);
+  return (
+    <FlagForm
+      initialFlags={initialFlags}
+      initialComment={initialComment}
+      status={status}
+      onChangeFlags={saver.setFlags}
+      onCommitComment={saver.commitComment}
+      onRetry={saver.retry}
+    />
   );
 }

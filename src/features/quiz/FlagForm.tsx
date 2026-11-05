@@ -1,56 +1,42 @@
-// 問題フラグのチェックボックスと自由入力、保存（7.1、7.3、7.6、7.7、10.3）。
-// 初期値は listOpenFlags の結果（「？」エリアで付いた guessable を含む）。保存は呼び出し側の saveQuestionFlags に委ねる。
-import { useId, useState, type FormEvent } from 'react';
+// 問題フラグのチェックボックスと自由入力、自動保存の状態表示（7.1〜7.7、7.9、7.10、10.3）。
+// 初期値は listOpenFlags の結果（「？」エリアで付いた guessable を含む）でマウント時だけ読む。
+// 保存要求の集約・直列化と変更有無の判定は呼び出し側の flagAutosave（FlagSaver）に委ねる。
+import { useId, useState } from 'react';
 
+import type { FlagSaveStatus } from './flagAutosave';
 import { CHECKBOX_FLAG_IDS, QUESTION_FLAGS, type CheckboxFlagId } from './flags';
 
 type Props = {
   initialFlags: readonly CheckboxFlagId[];
   initialComment: string | null;
-  onSave: (flags: CheckboxFlagId[], comment: string) => Promise<void>;
+  status: FlagSaveStatus;
+  /** チェックの変更ごとに変更後の集合で呼ぶ。 */
+  onChangeFlags: (flags: CheckboxFlagId[]) => void;
+  /** textarea の blur で入力値をそのまま渡す。 */
+  onCommitComment: (text: string) => void;
+  onRetry: () => void;
 };
 
-type SaveState = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' } | { kind: 'failed'; message: string };
-
-export function FlagForm({ initialFlags, initialComment, onSave }: Props) {
+export function FlagForm({ initialFlags, initialComment, status, onChangeFlags, onCommitComment, onRetry }: Props) {
   const idPrefix = useId();
   const [checked, setChecked] = useState<ReadonlySet<CheckboxFlagId>>(() => new Set(initialFlags));
   const [comment, setComment] = useState(initialComment ?? '');
-  const [state, setState] = useState<SaveState>({ kind: 'idle' });
-  const saving = state.kind === 'saving';
 
   const toggle = (id: CheckboxFlagId) => {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const save = async () => {
-    if (saving) return;
-    setState({ kind: 'saving' });
-    try {
-      await onSave(
-        CHECKBOX_FLAG_IDS.filter((id) => checked.has(id)),
-        comment,
-      );
-      setState({ kind: 'saved' });
-    } catch (e) {
-      setState({ kind: 'failed', message: e instanceof Error ? e.message : 'フラグの保存に失敗しました' });
-    }
-  };
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    void save();
+    const next = new Set(checked);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setChecked(next);
+    onChangeFlags(CHECKBOX_FLAG_IDS.filter((f) => next.has(f)));
   };
 
   const commentId = `${idPrefix}-comment`;
 
   return (
-    <form className="flex min-w-0 flex-col gap-3 rounded border border-border bg-surface p-3" aria-label="問題フラグ" onSubmit={onSubmit}>
+    <section
+      className="flex min-w-0 flex-col gap-3 rounded border border-border bg-surface p-3"
+      aria-label="問題フラグ"
+    >
       <fieldset className="flex min-w-0 flex-col gap-1">
         <legend className="mb-1 font-bold text-text">問題フラグ</legend>
         {QUESTION_FLAGS.map((f) => {
@@ -58,7 +44,11 @@ export function FlagForm({ initialFlags, initialComment, onSave }: Props) {
           const id = f.id as CheckboxFlagId;
           const inputId = `${idPrefix}-${id}`;
           return (
-            <label key={id} htmlFor={inputId} className="tap-target flex min-w-0 cursor-pointer items-center gap-3 rounded text-text">
+            <label
+              key={id}
+              htmlFor={inputId}
+              className="tap-target flex min-w-0 cursor-pointer items-center gap-3 rounded text-text"
+            >
               <input
                 id={inputId}
                 type="checkbox"
@@ -82,33 +72,25 @@ export function FlagForm({ initialFlags, initialComment, onSave }: Props) {
             rows={3}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
+            onBlur={(e) => onCommitComment(e.target.value)}
           />
         </div>
       ))}
-      {state.kind === 'failed' ? (
+      <p role="status" aria-live="polite" className="min-h-[1.5em] text-text-muted">
+        {status.kind === 'saving' ? '保存中…' : status.kind === 'saved' ? '保存しました' : ''}
+      </p>
+      {status.kind === 'failed' ? (
         <div role="alert" className="flex min-w-0 flex-col gap-2 text-warn">
-          <p className="min-w-0 break-words">{state.message}</p>
+          <p className="min-w-0 break-words">{status.message}</p>
           <button
             type="button"
             className="tap-target focus-ring self-start rounded border border-border px-3 py-2 text-text"
-            onClick={() => void save()}
+            onClick={onRetry}
           >
             再試行
           </button>
         </div>
       ) : null}
-      {state.kind === 'saved' ? (
-        <p role="status" className="text-text-muted">
-          保存しました
-        </p>
-      ) : null}
-      <button
-        type="submit"
-        className="tap-target focus-ring self-start rounded bg-primary px-4 py-2 font-bold text-surface disabled:opacity-60"
-        disabled={saving}
-      >
-        {saving ? '保存中…' : 'フラグを保存'}
-      </button>
-    </form>
+    </section>
   );
 }
