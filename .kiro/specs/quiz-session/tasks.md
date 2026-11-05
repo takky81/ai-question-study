@@ -155,7 +155,7 @@
 
 - [ ] 6. 変更対応: 判定後の ○× 表示とフラグの自動保存（2026-11-05）
 
-- [ ] 6.1 (P) フラグの自動保存キューを作る
+- [x] 6.1 (P) フラグの自動保存キューを作る
   - 先に `flagAutosave.test.ts` を書き、実行中の変更が集約されて最後の値だけが1回送られる、送信が直列で古い値が後から送られない、保存済みと同じコメント（前後の空白の差だけを含む）の blur は送らない、空白の blur で `comment = null` を送る、チェックの保存は blur で確定済みのコメントを送る、失敗で `failed` になり自動再送しない、`retry` と失敗中の新しい変更で最新値を送る、`flush` が実行中・未送信の完了を待って結果を返すことを、失敗するテストとして確認する
   - `flagAutosave.ts` に `setFlags`、`commitComment`、`retry`、`flush` と状態通知（`idle`／`saving`／`saved`／`failed`）を持つ `createFlagSaver` を実装し、保存関数は引数で受け取る（解答画面で `saveQuestionFlags` を束ねて渡す）
   - `flagAutosave.test.ts` がすべて通る
