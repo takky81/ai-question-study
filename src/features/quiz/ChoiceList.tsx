@@ -1,5 +1,6 @@
 // 選択肢一覧: 各選択肢の選択領域と右端の「？」エリア、末尾の固定の「わからない」（4.1、4.3、4.6、4.7）。
-// 判定後は選択（太枠）と正誤（色＋○／×）を1つの選択肢内で同時に示し、解説を枠内に出して操作を不可にする（5.1〜5.5、5.7、5.8）。
+// 判定後は選択（太枠）と正誤（色）を1つの選択肢内で同時に示し、「？」の位置の MarkCell に ○／× を出し、
+// 解説を枠内に出して操作を不可にする（5.1〜5.5、5.7〜5.9）。
 import { Circle, HelpCircle, X } from 'lucide-react';
 
 import type { AnswerKind, QuizChoice } from './types';
@@ -27,25 +28,31 @@ type Props = {
 
 const BUTTON = 'tap-target focus-ring text-text disabled:cursor-default';
 
-function Marks({ state }: { state: ChoiceDisplayState }) {
-  if (state.mark === null && !state.selected) return null;
+// 右端の列: 判定前の「？」と判定後の MarkCell で同じ幅（44px）と左の境界線を共有する（4.6、5.9）
+const COLUMN = 'flex w-11 shrink-0 items-center justify-center border-l border-border';
+
+function MarkCell({ mark }: { mark: ChoiceDisplayState['mark'] }) {
+  const color = mark === 'correct' ? 'text-correct' : mark === 'incorrect' ? 'text-incorrect' : '';
   return (
-    <span className="flex shrink-0 items-center gap-1 px-2 font-bold">
-      {state.mark === 'correct' && (
+    <span data-testid="mark-cell" className={`${COLUMN} font-bold ${color}`}>
+      {mark === 'correct' && (
         <>
           <Circle aria-hidden="true" className="h-5 w-5" />
           <span className="sr-only">正解</span>
         </>
       )}
-      {state.mark === 'incorrect' && (
+      {mark === 'incorrect' && (
         <>
           <X aria-hidden="true" className="h-5 w-5" />
           <span className="sr-only">不正解</span>
         </>
       )}
-      {state.selected && <span className="sr-only">選択した解答</span>}
     </span>
   );
+}
+
+function SelectedNote({ state }: { state: ChoiceDisplayState }) {
+  return state.selected ? <span className="sr-only">選択した解答</span> : null;
 }
 
 function itemClass(state: ChoiceDisplayState): string {
@@ -73,16 +80,20 @@ export function ChoiceList({ choices, selection, correctChoiceId, disabled = fal
               >
                 {c.body}
               </button>
-              <Marks state={state} />
-              <button
-                type="button"
-                className={`${BUTTON} flex shrink-0 items-center justify-center border-l border-border px-3`}
-                disabled={locked}
-                aria-label={`推測で解答: ${c.body}`}
-                onClick={() => onAnswer('guess', c.id)}
-              >
-                <HelpCircle aria-hidden="true" className="h-5 w-5" />
-              </button>
+              <SelectedNote state={state} />
+              {judged ? (
+                <MarkCell mark={state.mark} />
+              ) : (
+                <button
+                  type="button"
+                  className={`${BUTTON} ${COLUMN}`}
+                  disabled={locked}
+                  aria-label={`推測で解答: ${c.body}`}
+                  onClick={() => onAnswer('guess', c.id)}
+                >
+                  <HelpCircle aria-hidden="true" className="h-5 w-5" />
+                </button>
+              )}
             </div>
             {judged && c.explanation !== '' && (
               <p className="min-w-0 break-words border-t border-border p-3 text-sm text-text">{c.explanation}</p>
@@ -100,7 +111,8 @@ export function ChoiceList({ choices, selection, correctChoiceId, disabled = fal
           >
             わからない
           </button>
-          <Marks state={unknownState} />
+          <SelectedNote state={unknownState} />
+          {judged && unknownState.selected && <MarkCell mark={unknownState.mark} />}
         </div>
       </li>
     </ul>

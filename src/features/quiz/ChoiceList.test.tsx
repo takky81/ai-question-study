@@ -1,4 +1,4 @@
-// 選択肢一覧: 選択領域と「？」エリア、固定の「わからない」、判定後の正誤・解説・無効化（4.1、4.3、4.6、4.7、5.1〜5.5、5.7、5.8）
+// 選択肢一覧: 選択領域と「？」エリア、固定の「わからない」、判定後の正誤・解説・無効化（4.1、4.3、4.6、4.7、5.1〜5.5、5.7〜5.9）
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,10 @@ const choices: QuizChoice[] = [
 
 function item(name: string) {
   return screen.getByRole('button', { name: new RegExp(`^${name}`) }).closest('li') as HTMLElement;
+}
+
+function cellOf(li: HTMLElement) {
+  return li.querySelector('[data-testid="mark-cell"]') as HTMLElement;
 }
 
 describe('choiceDisplayState', () => {
@@ -89,6 +93,43 @@ describe('ChoiceList', () => {
     expect(within(u).getByText('不正解')).toBeInTheDocument();
     expect(item('選択肢A')).toHaveClass('mark-correct');
     for (const b of screen.getAllByRole('button')) expect(b).toBeDisabled();
+  });
+
+  it('判定後: 「？」ボタンをなくし、同じ右端の列に正解は ○、選んだ不正解は ×、それ以外は空の印セルを置く', () => {
+    render(<ChoiceList choices={choices} selection={{ choiceId: 'b' }} correctChoiceId="a" onAnswer={vi.fn()} />);
+    expect(screen.queryAllByRole('button', { name: /^推測で解答/ })).toHaveLength(0);
+    const a = cellOf(item('選択肢A'));
+    const b = cellOf(item('選択肢B'));
+    expect(a.tagName).toBe('SPAN');
+    expect(within(a).getByText('正解')).toBeInTheDocument();
+    expect(a).toHaveClass('w-11', 'border-l', 'text-correct');
+    expect(within(b).getByText('不正解')).toBeInTheDocument();
+    expect(b).toHaveClass('w-11', 'border-l', 'text-incorrect');
+    // 選ばなかった「わからない」には印セルを置かない
+    expect(cellOf(item('わからない'))).toBeNull();
+    // 印は右端の列だけに出る
+    expect(screen.getAllByText('正解')).toHaveLength(1);
+    expect(screen.getAllByText('不正解')).toHaveLength(1);
+    expect(document.querySelector('[class*="warn"]')).toBeNull();
+  });
+
+  it('判定後: 印なしの選択肢も幅を保った空の印セルを持ち、判定前の「？」と同じ幅', () => {
+    const { rerender } = render(
+      <ChoiceList choices={choices} selection={null} correctChoiceId={null} onAnswer={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: '推測で解答: 選択肢B' })).toHaveClass('w-11', 'border-l');
+    rerender(<ChoiceList choices={choices} selection={{ choiceId: 'a' }} correctChoiceId="a" onAnswer={vi.fn()} />);
+    const b = cellOf(item('選択肢B'));
+    expect(b).toHaveClass('w-11', 'border-l');
+    expect(b).toHaveTextContent('');
+    expect(screen.queryByText('不正解')).toBeNull();
+  });
+
+  it('「わからない」を選んだ判定後: 「わからない」の行に × の印セルを置く', () => {
+    render(<ChoiceList choices={choices} selection={{ choiceId: null }} correctChoiceId="a" onAnswer={vi.fn()} />);
+    const cell = cellOf(item('わからない'));
+    expect(within(cell).getByText('不正解')).toBeInTheDocument();
+    expect(cell).toHaveClass('w-11', 'border-l');
   });
 
   it('disabled 指定で判定前も操作不可', () => {
