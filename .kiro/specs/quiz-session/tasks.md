@@ -153,6 +153,47 @@
   - _Depends: 4.1, 4.2, 4.3_
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.1, 2.5, 3.3, 3.4, 3.5, 4.2, 4.4, 4.6, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 7.1, 7.2, 7.3, 7.4, 7.5, 7.7, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
 
+- [ ] 6. 変更対応: 判定後の ○× 表示とフラグの自動保存（2026-11-05）
+
+- [ ] 6.1 (P) フラグの自動保存キューを作る
+  - 先に `flagAutosave.test.ts` を書き、実行中の変更が集約されて最後の値だけが1回送られる、送信が直列で古い値が後から送られない、保存済みと同じコメント（前後の空白の差だけを含む）の blur は送らない、空白の blur で `comment = null` を送る、チェックの保存は blur で確定済みのコメントを送る、失敗で `failed` になり自動再送しない、`retry` と失敗中の新しい変更で最新値を送る、`flush` が実行中・未送信の完了を待って結果を返すことを、失敗するテストとして確認する
+  - `flagAutosave.ts` に `setFlags`、`commitComment`、`retry`、`flush` と状態通知（`idle`／`saving`／`saved`／`failed`）を持つ `createFlagSaver` を実装し、保存関数は引数で受け取る（解答画面で `saveQuestionFlags` を束ねて渡す）
+  - `flagAutosave.test.ts` がすべて通る
+  - _Boundary: flagAutosave.ts_
+  - _Requirements: 7.2, 7.4, 7.5, 7.6, 7.9_
+
+- [ ] 6.2 (P) 選択肢一覧の判定後の表示を ○× の列に変える
+  - 先に `ChoiceList.test.tsx` を更新し、判定後に「？」ボタンがなくなる、正解の行に「正解」（○）、選んだ不正解と選んだ「わからない」の行に「不正解」（×）、それ以外の行に印がないことを、失敗するテストとして確認する
+  - 判定後は「？」エリアを描画せず、同じ右端の列に `MarkCell`（ボタンでない要素、最小幅 44px、左の境界線を維持、印なしでも幅を保つ）を置く。本文横の印は廃止し、選んだ選択肢には視覚的に隠した「選択した解答」を付ける
+  - 判定前後で列の幅が変わらず、`--c-warn` 系の class を使わないことを含めて `ChoiceList.test.tsx` がすべて通る
+  - _Boundary: ChoiceList_
+  - _Requirements: 4.3, 5.9_
+
+- [ ] 6.3 フラグ入力を自動保存の表示に変える
+  - 先に `FlagForm.test.tsx` を更新し、チェックの変更で `onChangeFlags` が呼ばれる、入力中は `onCommitComment` が呼ばれず blur で呼ばれる、保存ボタンがなく Enter で送信しない、`saving`／`saved` が `role="status"` に出る、`failed` で入力を保持して `role="alert"` と再試行が出ることを、失敗するテストとして確認する
+  - 保存ボタンと `form` の submit を廃止し、props を `onChangeFlags`、`onCommitComment`、`status`、`onRetry` に置き換える。保存中もチェックボックスは操作可能にする
+  - `FlagForm.test.tsx` がすべて通り、既存の選択済みの初期表示のテストも通る
+  - _Boundary: FlagForm_
+  - _Depends: 6.1_
+  - _Requirements: 7.2, 7.4, 7.5, 7.6, 7.9, 7.10_
+
+- [ ] 6.4 解答画面で自動保存キューをつなぎ、遷移前に flush する
+  - 先に `QuizPlayPage.test.tsx` に、保存中に「次へ」を押すと保存完了後に遷移する、保存失敗中は「次へ」「終了」で遷移せず失敗表示が残る、待機中の二重クリックを無視することを、失敗するテストとして追加する
+  - 問題ごとに自動保存キューを作り（未解消フラグの取得値で初期化）、`FlagForm` に状態と操作を渡す。「次へ」「終了」で `await flush()` し、`false` なら遷移しない
+  - `QuizPlayPage.test.tsx` を含む単体テスト、typecheck、build が通る
+  - _Boundary: QuizPlayPage_
+  - _Depends: 6.1, 6.2, 6.3_
+  - _Requirements: 7.2, 7.4, 7.5, 7.6, 7.9, 7.10_
+
+- [ ] 6.5 利用者経路の E2E を新しい操作に合わせて更新する
+  - 判定後に「？」ボタンが消え、正解の行に ○、選んだ不正解・「わからない」の行に × が出ることを確認する
+  - 既存の「フラグを保存」クリックの手順を、操作後に DB の値を `expect.poll` で待つ形へ置き換え、保存ボタンがない、チェックだけで記録され外すと消える、自由入力の blur で記録され同じ内容の再 blur では変わらない、空白の blur でコメントが消える、textarea にフォーカスしたまま「次へ」を押してもコメントが記録されることを確認する
+  - フラグ保存の通信を遮断して入力保持・再試行の表示と、再試行で記録されることを確認する
+  - `e2e/quiz.spec.ts` が直列実行ですべて通る
+  - _Boundary: e2e/quiz.spec.ts_
+  - _Depends: 6.2, 6.4_
+  - _Requirements: 4.3, 5.9, 7.2, 7.4, 7.5, 7.6, 7.9, 7.10_
+
 ## Implementation Notes
 
 - 1.1: 3テーブルの FK は on delete restrict のため、解答・SRS・フラグを作る E2E は後片付けでそれらを先に消す必要がある（GUC `quiz.write_via_rpc` を立てる直接 SQL 接続、またはテスト専用の手段）。RPC は `set_config('quiz.write_via_rpc','on', true)`（トランザクション限定）を使い、入力検証なしにこの設定を立てる公開関数を作らない。

@@ -172,6 +172,46 @@
   - 直列実行の E2E が成功する
   - _Requirements: 9.1, 9.6, 10.2, 10.3, 10.4, 10.6, 10.7_
 
+- [ ] 7. 変更: 出力条件から「出題の有無」を外す（2026-11-05 の要件 1.6 の変更）
+
+- [ ] 7.1 (P) 出力対象の絞り込みから未出題の条件を外す migration を作る
+  - 先に、`p_filter` に `attempted: true` を渡しても未出題の問題が対象から外れないことを確かめる SQL の検査を書き、現在の関数で失敗することを確認する
+  - 新しい migration `20261108000000_exchange_drop_attempted.sql` で `exchange_private.export_target_ids` を同じシグネチャで置き換え、`attempted` の条件とコメントを外し、`revoke`／`grant` を再記述する。適用済みの migration は編集しない
+  - ローカル DB の再作成後、`attempted` の有無で対象の問題 ID が変わらず、正答率・出題数の条件は従来どおり効くことが SQL で確認できる
+  - _Boundary: supabase/migrations/20261108000000_exchange_drop_attempted.sql_
+  - _Requirements: 1.6_
+
+- [ ] 7.2 (P) 型・読み込み検証・条件変換から未出題の条件を外す
+  - 先に、`conditions.attempted` を含む出力ファイルが未知の項目のエラーになるテストと、`toExportFilter` の出力に `attempted` が含まれないテストを書き、失敗することを確認する
+  - `ExportConditionsSnapshot` と `EXPORT_FIELD_NAMES` から `attempted` を削除し、条件スナップショットの検証、既定値、`toExportFilter` からも削除する。`version` は 1 のまま据え置く
+  - `conditions.test.ts` と `parse.test.ts` の既存の `attempted` の記述を更新し、ユニットテストと型検査が通る
+  - _Boundary: format.ts, parse.ts, conditions.ts_
+  - _Requirements: 1.6, 3.7, 4.3_
+
+- [ ] 7.3 出力パネルから「出題の有無」の選択を外す
+  - 先に、出力パネルに「出題の有無」の選択がないことを確かめるコンポーネントテストを書き、失敗することを確認する
+  - ExportPanel から「出題の有無」の select を削除し、未出題だけを絞るための案内文も置かない
+  - コンポーネントテストで「出題の有無」がなく、正答率・出題数の条件と条件エラーで出力ボタンが無効になる挙動が従来どおり通る
+  - _Boundary: ExportPanel.tsx_
+  - _Depends: 7.2_
+  - _Requirements: 1.6, 1.10_
+
+- [ ] 7.4 問題生成 skill のフォーマット文書から未出題の条件を外す
+  - 先に、フォーマット文書の条件の表に `attempted` が現れないことを確かめる検査を formatDoc.test.ts に加え、失敗することを確認する
+  - `exchange-format.md` の条件の表から `attempted` の行を削除し、例の JSON に `attempted` があれば削除する。文書は英語のまま
+  - formatDoc.test.ts（全項目名との照合、例の JSON の取込検証）と skillDoc.test.ts が通る
+  - _Boundary: .claude/skills/question-authoring/references/exchange-format.md, example-import.json, formatDoc.test.ts_
+  - _Depends: 7.2_
+  - _Requirements: 1.6, 3.9, 9.6_
+
+- [ ] 7.5 出力の E2E を未出題の条件なしに更新する
+  - 出力画面に「出題の有無」の選択がなく、ダウンロードしたファイルの `conditions` に `attempted` が含まれないことを確認する検査を加える
+  - 出題数の条件での出力が従来どおり配下の対象だけになることを確認する
+  - 直列実行の E2E が成功する
+  - _Boundary: e2e/exchange.spec.ts_
+  - _Depends: 7.1, 7.3_
+  - _Requirements: 1.6_
+
 ## Implementation Notes
 
 - 1.1: export の p_filter のキーは flag / flagTypes / correctRateMin / correctRateMax / attemptMin / attemptMax / attempted / includeDisabled（2.1 の toExportFilter はこの名前で出す）。無効の問題は question_stats に行がないため集計値は 0・null（design どおり。4.2 の SKILL.md に一言添える）。
