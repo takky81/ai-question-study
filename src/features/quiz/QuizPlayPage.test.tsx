@@ -207,4 +207,82 @@ describe('QuizPlayPage', () => {
     await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent(/^\/quiz$/));
     expect(m.listQuizCandidates).not.toHaveBeenCalled();
   });
+
+  async function judgeFirst(user: ReturnType<typeof userEvent.setup>): Promise<string> {
+    const s1 = await firstStem();
+    await user.click(screen.getByRole('button', { name: `${s1}正解` }));
+    await screen.findByLabelText('問う価値が低い');
+    await waitFor(() => expect(screen.getByRole('button', { name: '次へ' })).toBeEnabled());
+    return s1;
+  }
+
+  it('取得したフラグ（guessable を含む）で初期化し、判定前は保存しない', async () => {
+    const user = userEvent.setup();
+    m.listOpenFlags.mockResolvedValue({ flags: ['guessable'], comment: 'メモ' });
+    renderPage();
+    await firstStem();
+    expect(m.saveQuestionFlags).not.toHaveBeenCalled();
+    await judgeFirst(user);
+    expect(screen.getByLabelText('知識がなくても推測で解ける')).toBeChecked();
+    await user.click(screen.getByLabelText('問う価値が低い'));
+    await waitFor(() => expect(m.saveQuestionFlags).toHaveBeenCalledTimes(1));
+    const [qid, flags, comment] = m.saveQuestionFlags.mock.calls[0]!;
+    expect(qid).toMatch(/^(aaaa|bbbb)/);
+    expect([...flags].sort()).toEqual(['guessable', 'low_value']);
+    expect(comment).toBe('メモ');
+  });
+
+  it('保存中に「次へ」を押すと保存完了後に遷移し、二重クリックで二重に進まない', async () => {
+    const user = userEvent.setup();
+    let resolveSave: () => void = () => {};
+    m.saveQuestionFlags.mockImplementationOnce(() => new Promise<void>((r) => (resolveSave = r)));
+    renderPage();
+    const s1 = await judgeFirst(user);
+    await user.click(screen.getByLabelText('問う価値が低い'));
+    await waitFor(() => expect(m.saveQuestionFlags).toHaveBeenCalledTimes(1));
+    const next = screen.getByRole('button', { name: '次へ' });
+    expect(next).toBeEnabled();
+    await user.click(next);
+    await user.click(next);
+    expect(screen.getByRole('heading', { name: s1 })).toBeInTheDocument();
+    resolveSave();
+    const s2 = s1 === '問1' ? '問2' : '問1';
+    await screen.findByRole('heading', { name: s2 });
+    // 二重クリックで2問目まで飛ばされず、2問目は未解答のまま
+    expect(screen.getByRole('button', { name: '次へ' })).toBeDisabled();
+    expect(m.getQuizQuestion).toHaveBeenCalledTimes(2);
+  });
+
+  it('textarea に入力して「次へ」を押すと、blur で確定したコメントを保存してから遷移する', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const s1 = await judgeFirst(user);
+    await user.type(screen.getByLabelText('疑義の内容（自由入力）'), '要確認');
+    expect(m.saveQuestionFlags).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: '次へ' }));
+    const s2 = s1 === '問1' ? '問2' : '問1';
+    await screen.findByRole('heading', { name: s2 });
+    expect(m.saveQuestionFlags).toHaveBeenCalledTimes(1);
+    expect(m.saveQuestionFlags.mock.calls[0]?.[2]).toBe('要確認');
+  });
+
+  it('保存失敗中は「次へ」「終了」で遷移せず、失敗表示が残り、再試行で保存できる', async () => {
+    const user = userEvent.setup();
+    m.saveQuestionFlags.mockRejectedValueOnce(new Error('フラグを保存できませんでした'));
+    renderPage();
+    const s1 = await judgeFirst(user);
+    await user.click(screen.getByLabelText('問う価値が低い'));
+    await screen.findByRole('alert');
+    await user.click(screen.getByRole('button', { name: '次へ' }));
+    await user.click(screen.getByRole('button', { name: '終了' }));
+    expect(screen.getByRole('heading', { name: s1 })).toBeInTheDocument();
+    expect(screen.getByTestId('loc')).toHaveTextContent(/^\/quiz\/play/);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByLabelText('問う価値が低い')).toBeChecked();
+    await user.click(screen.getByRole('button', { name: '再試行' }));
+    await waitFor(() => expect(m.saveQuestionFlags).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: '終了' }));
+    expect(screen.getByTestId('loc')).toHaveTextContent(`/quiz?subject=${S1}`);
+  });
 });

@@ -23,7 +23,7 @@ import {
 } from './api';
 import { ChoiceList } from './ChoiceList';
 import { FlagForm } from './FlagForm';
-import { createFlagSaver } from './flagAutosave';
+import { createFlagSaver, type FlagSaveStatus, type FlagSaver } from './flagAutosave';
 import type { CheckboxFlagId } from './flags';
 import { QuestionStatsBar } from './QuestionStatsBar';
 import { parseRangeParams, toRangeParams } from './range';
@@ -37,7 +37,10 @@ function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-type OpenFlags = { questionId: string; flags: CheckboxFlagId[]; comment: string | null };
+type OpenFlags = { questionId: string; flags: CheckboxFlagId[]; comment: string | null; saver: FlagSaver };
+
+const IDLE: FlagSaveStatus = { kind: 'idle' };
+const noopSubscribe = () => () => {};
 
 export function QuizPlayPage(): ReactElement | null {
   const headingId = useId();
@@ -56,6 +59,8 @@ export function QuizPlayPage(): ReactElement | null {
   const [flagsError, setFlagsError] = useState<string | null>(null);
   const [flagsTry, setFlagsTry] = useState(0);
   const questionHeading = useRef<HTMLHeadingElement>(null);
+  // 「次へ」「終了」の flush 待機中か。ボタンは disabled にせず（blur 直後の click を失わないため）二重クリックを無視する
+  const leaving = useRef(false);
 
   // 範囲が不正なら範囲選択へ置換遷移する（1.7）
   useEffect(() => {
@@ -151,7 +156,12 @@ export function QuizPlayPage(): ReactElement | null {
     setFlagsError(null);
     listOpenFlags(flagsQuestionId).then(
       (r) => {
-        if (active) setOpenFlags({ questionId: flagsQuestionId, ...r });
+        if (!active) return;
+        // 判定後の問題ごとに自動保存キューを1つ作る（7.2、7.4〜7.6、7.9）
+        const saver = createFlagSaver({ flags: r.flags, comment: r.comment }, (s) =>
+          saveQuestionFlags(flagsQuestionId, s.flags, s.comment ?? ''),
+        );
+        setOpenFlags({ questionId: flagsQuestionId, ...r, saver });
       },
       (e: unknown) => {
         if (active) setFlagsError(messageOf(e));
@@ -167,7 +177,24 @@ export function QuizPlayPage(): ReactElement | null {
     if (currentId !== null) questionHeading.current?.focus();
   }, [currentId]);
 
+  const current = state.current;
+  const flags = openFlags !== null && openFlags.questionId === currentId ? openFlags : null;
+  const saver = flags?.saver ?? null;
+  const flagStatus = useSyncExternalStore(saver?.subscribe ?? noopSubscribe, () => saver?.getStatus() ?? IDLE);
+
   if (range === null || rangeKey === null) return null;
+
+  // 未送信・送信中のフラグ保存を待ってから遷移する。失敗なら遷移せず FlagForm の失敗表示と再試行を残す（7.6）
+  async function leaveAfterFlush(go: () => void) {
+    if (leaving.current) return;
+    leaving.current = true;
+    try {
+      if (saver !== null && !(await saver.flush())) return;
+      go();
+    } finally {
+      leaving.current = false;
+    }
+  }
 
   function answer(kind: AnswerKind, choiceId: string | null) {
     dispatch({ type: 'answered', kind, choiceId, clientAnswerId: crypto.randomUUID() });
@@ -180,9 +207,7 @@ export function QuizPlayPage(): ReactElement | null {
     else setLoadTry((n) => n + 1);
   }
 
-  const current = state.current;
   const judged = state.phase === 'judged';
-  const flags = openFlags !== null && openFlags.questionId === currentId ? openFlags : null;
 
   return (
     <section aria-labelledby={headingId} className="mx-auto flex w-full min-w-0 max-w-[40rem] flex-col gap-4">
@@ -193,7 +218,7 @@ export function QuizPlayPage(): ReactElement | null {
         {state.phase !== 'finished' && (
           <button
             type="button"
-            onClick={() => void navigate(`/quiz?${rangeKey}`)}
+            onClick={() => void leaveAfterFlush(() => void navigate(`/quiz?${rangeKey}`))}
             className={`${BUTTON} border-border`}
           >
             終了
@@ -269,18 +294,21 @@ export function QuizPlayPage(): ReactElement | null {
             ) : flags === null ? (
               <p className="text-text-muted">フラグを読み込み中…</p>
             ) : (
-              <AutosaveFlagForm
+              <FlagForm
                 key={current.id}
-                questionId={current.id}
                 initialFlags={flags.flags}
                 initialComment={flags.comment}
+                status={flagStatus}
+                onChangeFlags={flags.saver.setFlags}
+                onCommitComment={flags.saver.commitComment}
+                onRetry={flags.saver.retry}
               />
             ))}
           <div>
             <button
               type="button"
               disabled={!judged || state.recordStatus !== 'saved'}
-              onClick={() => dispatch({ type: 'next' })}
+              onClick={() => void leaveAfterFlush(() => dispatch({ type: 'next' }))}
               className={`${BUTTON} border-primary bg-primary font-bold text-bg`}
             >
               次へ
@@ -289,33 +317,5 @@ export function QuizPlayPage(): ReactElement | null {
         </>
       )}
     </section>
-  );
-}
-
-// 6.3 の props 変更に合わせた暫定のつなぎ。6.4 で自動保存キューを QuizPlayPage に持ち上げ、遷移前に flush する。
-function AutosaveFlagForm({
-  questionId,
-  initialFlags,
-  initialComment,
-}: {
-  questionId: string;
-  initialFlags: CheckboxFlagId[];
-  initialComment: string | null;
-}) {
-  const [saver] = useState(() =>
-    createFlagSaver({ flags: initialFlags, comment: initialComment }, (s) =>
-      saveQuestionFlags(questionId, s.flags, s.comment ?? ''),
-    ),
-  );
-  const status = useSyncExternalStore(saver.subscribe, saver.getStatus);
-  return (
-    <FlagForm
-      initialFlags={initialFlags}
-      initialComment={initialComment}
-      status={status}
-      onChangeFlags={saver.setFlags}
-      onCommitComment={saver.commitComment}
-      onRetry={saver.retry}
-    />
   );
 }
