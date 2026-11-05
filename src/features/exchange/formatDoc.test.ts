@@ -22,6 +22,10 @@ describe('exchange-format.md', () => {
       expect(doc).toContain(`\`${name}\``);
     },
   );
+
+  it('未出題の条件 attempted が現れない（1.6）', () => {
+    expect(doc).not.toContain('`attempted`');
+  });
 });
 
 describe('example-import.json', () => {

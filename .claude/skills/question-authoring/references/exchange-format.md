@@ -36,7 +36,6 @@ The app writes this file using the conditions the user selected. Treat it as rea
 | `correctRateMax` | number or null | Upper bound of the correct rate (0–1) |
 | `attemptMin` | number or null | Lower bound of the attempt count |
 | `attemptMax` | number or null | Upper bound of the attempt count |
-| `attempted` | boolean or null | `true` = attempted only, `false` = never attempted only, null = no filter |
 | `includeDisabled` | boolean | Whether disabled questions were included |
 
 ### `keywords` elements

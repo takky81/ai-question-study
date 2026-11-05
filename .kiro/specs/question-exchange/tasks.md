@@ -196,7 +196,7 @@
   - _Depends: 7.2_
   - _Requirements: 1.6, 1.10_
 
-- [ ] 7.4 問題生成 skill のフォーマット文書から未出題の条件を外す
+- [x] 7.4 問題生成 skill のフォーマット文書から未出題の条件を外す
   - 先に、フォーマット文書の条件の表に `attempted` が現れないことを確かめる検査を formatDoc.test.ts に加え、失敗することを確認する
   - `exchange-format.md` の条件の表から `attempted` の行を削除し、例の JSON に `attempted` があれば削除する。文書は英語のまま
   - formatDoc.test.ts（全項目名との照合、例の JSON の取込検証）と skillDoc.test.ts が通る
