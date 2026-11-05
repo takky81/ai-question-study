@@ -204,7 +204,7 @@
   - _Depends: 7.2_
   - _Requirements: 1.6, 3.9, 9.6_
 
-- [ ] 7.5 出力の E2E を未出題の条件なしに更新する
+- [x] 7.5 出力の E2E を未出題の条件なしに更新する
   - 出力画面に「出題の有無」の選択がなく、ダウンロードしたファイルの `conditions` に `attempted` が含まれないことを確認する検査を加える
   - 出題数の条件での出力が従来どおり配下の対象だけになることを確認する
   - 直列実行の E2E が成功する
@@ -233,3 +233,4 @@
 - 6.1: e2e/exchange.spec.ts は共通の補助（loadEnv / ownerClient / desktopOnly）を先頭に置き、describe ごとに desktopOnly() を付ける。出力の E2E は seed を読むだけ。
 - 6.2: 取込 E2E は実行ごとに exchange-imp- 接頭辞の科目を作って afterAll で消す（seed は触らない）。23505 は制約名で文言を分ける（keywords_sibling_name_key はキーワード名、choices_question_one_correct_key は正解1つ、それ以外は汎用）。
 - 6.3: 例の取込用 JSON の E2E は、実行ごとに作る科目の ID へ例の ID を置き換えて取り込む。basedOnExportedAt が古いため警告は必ず出る前提で検査する。
+- 手動の動作確認は E2E 用の seed 科目（「E2E 〜」「統計検証」）で行わない。解答やフラグが残ると seed の期待値に頼る E2E が失敗する。手動確認には supabase/demo-data.sql のデモ科目を使い、崩れたら db reset の後にデモデータを入れ直す。

@@ -173,6 +173,24 @@ test.describe('出力', () => {
     expect(file.questions.some((q) => q.id === qId(6))).toBe(false);
   });
 
+  test('「出題の有無」の選択はなく、出題数の上限 0 で配下の未出題の問題だけが出力され、条件に attempted を含まない（1.6）', async ({
+    page,
+  }) => {
+    const panel = await openExport(page);
+    await selectSubject(panel, 'E2E 交換テスト');
+    await expect(panel.getByLabel('出題の有無')).toHaveCount(0);
+    await expect(panel.getByText('出題の有無')).toHaveCount(0);
+    await panel.getByRole('treeitem', { name: 'ソート', exact: true }).click();
+    await panel.getByLabel('出題数の上限').fill('0');
+    await expect(panel.getByText('1 問が一致します')).toBeVisible();
+
+    const { file } = await downloadExport(page, panel);
+    expect(file.conditions).not.toHaveProperty('attempted');
+    expect(file.conditions).toMatchObject({ keywordId: kwId(102), attemptMax: 0 });
+    // ソート配下で解答のない有効な問題は d007 だけ（d005 は無効、d006 は削除、d008 は範囲外）
+    expect(ids(file)).toEqual([qId(7)]);
+  });
+
   test('1,200 問・選択肢 4,800 件が欠落・重複なく DB と一致する（2.9）', async ({ page }) => {
     test.setTimeout(120_000);
     const db = await ownerClient();
