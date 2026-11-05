@@ -15,6 +15,7 @@ const NAME_PREFIX = 'quiz-ui-';
 const DB_CONTAINER = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_ai-question-study';
 const RECORD_RPC = '**/rest/v1/rpc/record_answer*';
 const CANDIDATES_RPC = '**/rest/v1/rpc/list_quiz_candidates*';
+const FLAGS_RPC = '**/rest/v1/rpc/save_question_flags*';
 
 function loadEnv(): { url: string; key: string } {
   const env: Record<string, string> = {};
@@ -37,7 +38,21 @@ function sqlOk(script: string): string[] {
   try {
     const out = execFileSync(
       'docker',
-      ['exec', '-i', DB_CONTAINER, 'psql', '-U', 'postgres', '-d', 'postgres', '-X', '-q', '-At', '-v', 'ON_ERROR_STOP=1'],
+      [
+        'exec',
+        '-i',
+        DB_CONTAINER,
+        'psql',
+        '-U',
+        'postgres',
+        '-d',
+        'postgres',
+        '-X',
+        '-q',
+        '-At',
+        '-v',
+        'ON_ERROR_STOP=1',
+      ],
       { input: script, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] },
     );
     return out.split(/\r?\n/).filter((l) => l.length > 0);
@@ -197,8 +212,18 @@ async function waitSaved(page: Page): Promise<void> {
   await expect(nextButton(page)).toBeEnabled();
 }
 
+// 判定後の右端の列: 「？」と同じ 44px 幅で、正誤の記号（読み上げ用の文言）を持つ（5.9）
+async function expectMark(page: Page, body: string, label: '正解' | '不正解'): Promise<void> {
+  const cell = choiceItem(page, body).getByTestId('mark-cell');
+  await expect(cell).toHaveText(label);
+  const box = (await cell.boundingBox())!;
+  expect(Math.round(box.width)).toBe(44);
+}
+
 async function expectNoHorizontalScroll(page: Page): Promise<void> {
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
   expect(overflow).toBeLessThanOrEqual(0);
 }
 
@@ -261,6 +286,9 @@ test.describe('範囲選択から終了まで', () => {
     await expect(c1).toHaveClass(/choice-selected/);
     await expect(c1.getByText('正解', { exact: true })).toBeAttached();
     await expect(choiceItem(page, '問1の誤答')).not.toHaveClass(/mark-/);
+    await expect(page.getByRole('button', { name: /^推測で解答/ })).toHaveCount(0);
+    await expectMark(page, '問1の正解', '正解');
+    await expect(choiceItem(page, '問1の誤答').getByTestId('mark-cell')).toHaveText('');
     await expect(page.getByText('問1の正解の解説')).toBeVisible();
     await expect(page.getByText('問1の誤答の解説')).toBeVisible();
     const fb1 = page.getByRole('region', { name: '解説' });
@@ -269,7 +297,7 @@ test.describe('範囲選択から終了まで', () => {
     await expect(statsBar(page)).toHaveText('正答 1 / 出題 1（100%）');
     await expect(page.getByRole('button', { name: '問1の誤答', exact: true })).toBeDisabled();
     await waitSaved(page);
-    await expect(page.getByRole('form', { name: '問題フラグ' })).toBeVisible();
+    await expect(page.getByRole('region', { name: '問題フラグ' })).toBeVisible();
     await nextButton(page).click();
 
     // 問2: 誤答 → 選んだ誤答に ×、正解に ○（5.2、5.4）
@@ -280,6 +308,9 @@ test.describe('範囲選択から終了まで', () => {
     await expect(w2).toHaveClass(/choice-selected/);
     await expect(w2.getByText('不正解', { exact: true })).toBeAttached();
     await expect(choiceItem(page, '問2の正解')).toHaveClass(/mark-correct/);
+    await expect(page.getByRole('button', { name: /^推測で解答/ })).toHaveCount(0);
+    await expectMark(page, '問2の誤答', '不正解');
+    await expectMark(page, '問2の正解', '正解');
     await expect(page.getByRole('region', { name: '解説' }).getByText('親 / 中 / 葉', { exact: true })).toBeVisible();
     await expect(statsBar(page)).toHaveText('正答 0 / 出題 1（0%）');
     await waitSaved(page);
@@ -310,37 +341,66 @@ test.describe('範囲選択から終了まで', () => {
     await expect(page.getByText('出題対象 3 問（未出題 0 問）')).toBeVisible();
   });
 
-  test('「わからない」の表示と、フラグの保存・解除・空白コメント・再読み込み後の選択済み表示', async ({ page }) => {
+  test('「わからない」の ○×、フラグの自動保存・空白コメント・次へ直前の入力・再読み込み後の選択済み・保存失敗と再試行', async ({
+    page,
+  }) => {
+    let flagRequests = 0;
+    page.on('request', (r) => {
+      if (r.url().includes('/rest/v1/rpc/save_question_flags')) flagRequests++;
+    });
+    const flagsOf = () => expect.poll(() => openFlags(flagsQuestion));
     await openPlay(page, flagsSubject.id);
     await expect(page.getByRole('heading', { name: '旗問', exact: true })).toBeVisible();
 
-    // 「わからない」: わからないに ×、正解に ○、成績は 0 / 1（4.6、5.3、6.2）
+    // 「わからない」: わからないの列に ×、正解の列に ○、「？」は消え、成績は 0 / 1（4.3、4.6、5.3、5.9、6.2）
     await page.getByRole('button', { name: 'わからない', exact: true }).click();
     const unknown = choiceItem(page, 'わからない');
     await expect(unknown).toHaveClass(/mark-incorrect/);
     await expect(unknown).toHaveClass(/choice-selected/);
     await expect(choiceItem(page, '旗問の正解')).toHaveClass(/mark-correct/);
+    await expect(page.getByRole('button', { name: /^推測で解答/ })).toHaveCount(0);
+    await expectMark(page, 'わからない', '不正解');
+    await expectMark(page, '旗問の正解', '正解');
+    await expect(choiceItem(page, '旗問の誤答').getByTestId('mark-cell')).toHaveText('');
     await expect(page.getByText('旗問の全体解説')).toBeVisible();
     await expect(page.getByRole('region', { name: '解説' }).getByText('フラグ語', { exact: true })).toBeVisible();
     await expect(statsBar(page)).toHaveText('正答 0 / 出題 1（0%）');
     await waitSaved(page);
 
-    // 2つのチェックと空白だけのコメント → コメントは記録されない（7.1、7.2、7.5）
+    // 保存ボタンはなく、チェックの操作だけで記録され、外すと消える（7.2、7.4、7.9）
+    const form = page.getByRole('region', { name: '問題フラグ' });
     const lowValue = page.getByRole('checkbox', { name: '問う価値が低い' });
     const defective = page.getByRole('checkbox', { name: /^問題不備/ });
     const comment = page.getByLabel('疑義の内容（自由入力）');
+    await expect(page.getByRole('button', { name: 'フラグを保存' })).toHaveCount(0);
     await expect(lowValue).not.toBeChecked();
     await lowValue.check();
+    await flagsOf().toEqual(['low_value']);
     await defective.check();
+    await flagsOf().toEqual(['defective', 'low_value']);
+    await defective.uncheck();
+    await flagsOf().toEqual(['low_value']);
+    await expect(form.getByText('保存しました')).toBeVisible();
+
+    // 自由入力は blur で記録され、同じ内容の再 blur では保存要求を出さない（7.2、7.10）
+    await comment.fill('  選択肢が曖昧  ');
+    await comment.blur();
+    await flagsOf().toEqual(['comment:選択肢が曖昧', 'low_value']);
+    const before = flagRequests;
+    await comment.focus();
+    await comment.blur();
+    await defective.check(); // 次の保存要求を目印にして、再 blur の分が送られていないことを確かめる
+    await flagsOf().toEqual(['comment:選択肢が曖昧', 'defective', 'low_value']);
+    expect(flagRequests).toBe(before + 1);
+
+    // 空白だけで blur するとコメントは消える（7.5）
     await comment.fill('  　 ');
-    await page.getByRole('button', { name: 'フラグを保存' }).click();
-    await expect(page.getByText('保存しました')).toBeVisible();
-    expect(openFlags(flagsQuestion)).toEqual(['defective', 'low_value']);
+    await comment.blur();
+    await flagsOf().toEqual(['defective', 'low_value']);
 
     // 再読み込み後、同じ問題を解くと選択済みで表示される（7.7）
     await page.reload();
     await expect(page.getByRole('heading', { name: '旗問', exact: true })).toBeVisible();
-    await expect(statsBar(page)).toHaveText('正答 0 / 出題 1（0%）');
     await page.getByRole('button', { name: '旗問の正解', exact: true }).click();
     await expect(statsBar(page)).toHaveText('正答 1 / 出題 2（50%）');
     await waitSaved(page);
@@ -348,25 +408,36 @@ test.describe('範囲選択から終了まで', () => {
     await expect(defective).toBeChecked();
     await expect(comment).toHaveValue('');
 
-    // チェックを外し、コメントを入れて保存（7.4）
-    await defective.uncheck();
-    await comment.fill('  選択肢が曖昧  ');
-    await page.getByRole('button', { name: 'フラグを保存' }).click();
-    await expect(page.getByText('保存しました')).toBeVisible();
-    expect(openFlags(flagsQuestion)).toEqual(['comment:選択肢が曖昧', 'low_value']);
+    // textarea にフォーカスしたまま「次へ」を押しても入力が記録されてから遷移する（7.6、7.10）
+    await comment.fill('すぐ次へ');
+    await expect(comment).toBeFocused();
+    await nextButton(page).click();
+    await expect(page.getByText(/^\d+ 問解答、正答 \d+ 問$/)).toBeVisible();
+    expect(openFlags(flagsQuestion)).toEqual(['comment:すぐ次へ', 'defective', 'low_value']);
 
+    // 保存の通信を1回だけ遮断: 入力は保持され、失敗と再試行が出て「次へ」で遷移しない。再試行で記録される（7.6）
     await page.reload();
+    await expect(page.getByRole('heading', { name: '旗問', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '旗問の誤答', exact: true }).click();
     await waitSaved(page);
-    await expect(lowValue).toBeChecked();
+    await expect(defective).toBeChecked();
+    await page.route(FLAGS_RPC, (route) => route.abort('failed'), { times: 1 });
+    await defective.uncheck();
+    const alert = form.getByRole('alert');
+    await expect(alert).toBeVisible();
+    await expect(alert.getByRole('button', { name: '再試行' })).toBeVisible();
     await expect(defective).not.toBeChecked();
-    await expect(comment).toHaveValue('選択肢が曖昧');
-
-    // 空白だけのコメントで保存するとコメントは消える（7.5）
-    await comment.fill('   ');
-    await page.getByRole('button', { name: 'フラグを保存' }).click();
-    await expect(page.getByText('保存しました')).toBeVisible();
-    expect(openFlags(flagsQuestion)).toEqual(['low_value']);
+    await expect(comment).toHaveValue('すぐ次へ');
+    expect(openFlags(flagsQuestion)).toEqual(['comment:すぐ次へ', 'defective', 'low_value']);
+    await nextButton(page).click();
+    await expect(alert).toBeVisible();
+    await expect(page.getByRole('heading', { name: '旗問', exact: true })).toBeVisible();
+    await expect(page.getByText(/問解答、正答/)).toHaveCount(0);
+    await alert.getByRole('button', { name: '再試行' }).click();
+    await flagsOf().toEqual(['comment:すぐ次へ', 'low_value']);
+    await expect(form.getByRole('alert')).toHaveCount(0);
+    await nextButton(page).click();
+    await expect(page.getByText(/^\d+ 問解答、正答 \d+ 問$/)).toBeVisible();
   });
 });
 
@@ -404,7 +475,10 @@ test.describe('失敗と再試行', () => {
     // 終了で同じ範囲の範囲選択に戻り、記録済みの解答が残る（10.6）
     await page.getByRole('button', { name: '終了', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/quiz\\?subject=${retrySubject.id}`));
-    await expect(page.getByRole('button', { name: retrySubject.name, exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: retrySubject.name, exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await expect(treeItem(page, '科目全体')).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByText('出題対象 1 問（未出題 0 問）')).toBeVisible();
     expect(answerCount(retryQuestion)).toBe(1);
@@ -512,7 +586,9 @@ test.describe('レスポンシブ・キーボード・テーマ・導線', () =>
     expect(dark.correct.bg).not.toBe(dark.incorrect.bg);
   });
 
-  test('学習区分の「出題」導線（PC はサイドナビ、モバイルは下部バー）から範囲選択を開ける', async ({ page }, testInfo) => {
+  test('学習区分の「出題」導線（PC はサイドナビ、モバイルは下部バー）から範囲選択を開ける', async ({
+    page,
+  }, testInfo) => {
     const navName = testInfo.project.name === 'desktop' ? 'サイドナビゲーション' : '学習ナビゲーション';
     const nav = page.getByRole('navigation', { name: navName, exact: true });
     await expect(nav).toBeVisible();
