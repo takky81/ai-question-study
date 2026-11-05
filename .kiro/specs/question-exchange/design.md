@@ -56,6 +56,7 @@
 - `questions`・`keywords` の `updated_at` の更新規則の変更（競合検出の前提）
 - `validateQuestion` の規則・重大度の変更、`QUESTION_FLAGS` の識別子の変更、`question_stats`・`keyword_stats` の列の変更
 - 「修正された問題」の判定範囲の変更（フラグ解消の意味が変わる）
+- 2026-11-05: 要件 1.6 から「未出題かどうか」を削除した。条件の型・交換フォーマット・`export_target_ids`・ExportPanel・skill 文書を同時に更新する（`version` は据え置き。理由は File Structure Plan を参照）
 
 ## Architecture
 
@@ -125,7 +126,8 @@ graph TB
 ```text
 supabase/migrations/
 ├── 20261106000000_exchange_export.sql   # exchange_private スキーマ、export_target_ids、export_* RPC と行型、権限
-└── 20261106000100_exchange_import.sql   # apply_exchange_import、権限
+├── 20261106000100_exchange_import.sql   # apply_exchange_import、権限
+└── 20261108000000_exchange_drop_attempted.sql # export_target_ids を create or replace し attempted 条件を外す（適用済み migration は編集しない）
 src/features/exchange/
 ├── format.ts                 # 交換フォーマットの型、EXCHANGE_FORMAT、EXCHANGE_VERSION、KeywordRef
 ├── parse.ts                  # parseImportFile、parseExportFile（unknown → 型付きの値 + FormatIssue[]）
@@ -165,6 +167,18 @@ e2e/
 
 - `src/app/routes.tsx` — `{ path: 'exchange', element: <ExchangePage />, nav: { label: '入出力', group: 'manage', icon: ArrowLeftRight, order: 2 } }` を追加する（10.1）
 - `.gitignore` — 出力・生成した JSON の置き場 `exchange-data/` を追加する（生成物をソースとして扱わない）
+
+#### 2026-11-05 の要件変更（1.6 から「未出題かどうか」を削除）で変更するファイル
+
+- `supabase/migrations/20261108000000_exchange_drop_attempted.sql`（新規）— `exchange_private.export_target_ids` を同じシグネチャで `create or replace` し、`attempted` の条件とコメントを外す。権限は維持されるが、明示のため `revoke`／`grant` を再記述する。`attempted` を読むのはこの関数だけ（`supabase/migrations` を grep して確認済み）
+- `src/features/exchange/format.ts` — `ExportConditionsSnapshot` と `EXPORT_FIELD_NAMES` から `attempted` を削除
+- `src/features/exchange/parse.ts` — 条件スナップショットの検証から `attempted` を削除（未知の項目としてエラーになる）
+- `src/features/exchange/conditions.ts` — 既定値と `toExportFilter` から `attempted` を削除
+- `src/features/exchange/ExportPanel.tsx` — 「出題の有無」の select を削除
+- `src/features/exchange/conditions.test.ts`、`parse.test.ts`、`formatDoc.test.ts`、`ExportPanel.test.tsx`、`e2e/exchange.spec.ts` — `attempted` を使う箇所を削除・更新
+- `.claude/skills/question-authoring/references/exchange-format.md` と例の JSON — `attempted` の行と例中の項目を削除
+- `version` は 1 のまま据え置く。実運用の出力ファイルが存在せず後方互換が不要なため、版を上げると skill・parse・テストの変更が増えるだけで利点がない。旧ファイルに `attempted` があれば未知の項目として明示的なエラーになる
+- 他の機能への影響なし: `src/features/stats` の attempt 系の名前は learning-stats 独自の語で、exchange の `attempted` とは無関係。`QuestionEditPage.tsx` の `attempted` は保存試行の状態で無関係
 
 ## System Flows
 
@@ -246,7 +260,7 @@ sequenceDiagram
 | 1.3 | 部分木で絞り込み | export_target_ids | `keyword_subtree_ids` | — |
 | 1.4 | 科目全体 | export_target_ids | `p_keyword_id is null` | — |
 | 1.5 | フラグ条件 | conditions.ts、export_target_ids | `ExportConditions.flag` | — |
-| 1.6 | 統計条件 | conditions.ts、export_target_ids | `correctRate`、`attemptCount`、`attempted` | — |
+| 1.6 | 統計条件（正答率の範囲・出題数の範囲） | conditions.ts、export_target_ids、ExportPanel | `correctRateMin`／`Max`、`attemptMin`／`Max` | — |
 | 1.7 | 条件の AND | export_target_ids | — | — |
 | 1.8 | 件数の表示 | ExportPanel、api.ts | `countExportQuestions` | — |
 | 1.9 | 0件と階層のみの出力 | ExportPanel、exportBuild.ts | `questions: []` | — |
@@ -359,7 +373,7 @@ sequenceDiagram
   - `includeDisabled` が真でなければ `q.disabled_at is null`（2.6、2.7）
   - `p_keyword_id` があれば `exists (… question_keywords … keyword_id in (select public.keyword_subtree_ids(p_keyword_id)))`（1.3、1.4）
   - `flag`: `any` は未解消のフラグが1件以上、`none` は0件、`types` は `flagTypes` のいずれかの未解消のフラグがある（1.5）
-  - 統計は `left join public.question_stats s on s.question_id = q.id`。`correctRateMin`／`Max` は `s.correct_rate between`（null の問題は除外）、`attemptMin`／`Max` は `coalesce(s.attempt_count, 0) between`、`attempted` が `false` は `coalesce(s.attempt_count, 0) = 0`、`true` は `> 0`（1.6）
+  - 統計は `left join public.question_stats s on s.question_id = q.id`。`correctRateMin`／`Max` は `s.correct_rate between`（null の問題は除外）、`attemptMin`／`Max` は `coalesce(s.attempt_count, 0) between`（1.6）。「未出題かどうか」の条件は持たない（2026-11-05 の要件変更で削除）。`p_filter` に `attempted` があっても参照しない
   - すべての条件を AND で結合する（1.7）
 - 公開 RPC（`language sql stable`、`security invoker`、`search_path = ''`、引数はいずれも `(p_subject_id uuid, p_keyword_id uuid, p_filter jsonb)`、`authenticated` に `execute`）:
 
@@ -416,7 +430,6 @@ export type ExportConditionsSnapshot = {
   flagTypes: QuestionFlagId[];
   correctRateMin: number | null; correctRateMax: number | null;   // 0〜1
   attemptMin: number | null; attemptMax: number | null;
-  attempted: boolean | null;
   includeDisabled: boolean;
 };
 
@@ -644,7 +657,7 @@ export function toExchangeErrorMessage(context: string, error: { code?: string; 
 
 #### ExportPanel / KeywordScopePicker
 
-- 科目の選択 → `KeywordScopePicker`（`role="tree"`、矢印キー、単一選択、「科目全体」の選択肢）→ フラグ条件（すべて／あり／なし／種類を指定。種類は `QUESTION_FLAGS` の表示名のチェックボックス）→ 統計条件（正答率の下限・上限 %、出題数の下限・上限、未出題のみ／出題済みのみ）→「無効化された問題を含める」（1.1、1.2、1.5、1.6、2.7）。
+- 科目の選択 → `KeywordScopePicker`（`role="tree"`、矢印キー、単一選択、「科目全体」の選択肢）→ フラグ条件（すべて／あり／なし／種類を指定。種類は `QUESTION_FLAGS` の表示名のチェックボックス）→ 統計条件（正答率の下限・上限 %、出題数の下限・上限）。「出題の有無」の選択は置かず、未出題だけを絞るための案内文も出さない（要件から外した機能を UI で示唆しないため。出題数の上限 0 で同じ結果になるが、案内は不要と判断）→「無効化された問題を含める」（1.1、1.2、1.5、1.6、2.7）。
 - 条件が変わるたびに 300ms のデバウンスで `countExportQuestions` を呼び件数を表示する（1.8）。`validateConditions` のエラーは欄の近くに表示し、出力ボタンを無効にする（1.10）。0件なら「条件に一致する問題はありません。キーワード階層だけを出力できます」と表示し、出力を許可する（1.9）。
 - 出力: `fetchExportRows` → `buildExportFile` → `Blob` を `exportFileName` でダウンロード（2.1、2.11）。失敗時は `role="alert"` と「再試行」（2.10）。PC 幅（`lg` 以上）は条件と件数・木を2列で表示する（10.2）。
 
@@ -707,8 +720,8 @@ export function toExchangeErrorMessage(context: string, error: { code?: string; 
 
 ### Unit Tests
 
-- `parse.test.ts`: 壊れた JSON、`format` 違い、`version: 2` でそれぞれ単独の issue（4.2）。必須欠落・型違い・未知の操作（`questions.delete`）・未知の項目が path 付きで全件出る（3.7、4.3）。省略された配列の正規化
-- `conditions.test.ts`: 下限 > 上限、範囲外、`types` で種類なしのエラー。% と 0〜1 の変換（1.5、1.6、1.10）
+- `parse.test.ts`: 壊れた JSON、`format` 違い、`version: 2` でそれぞれ単独の issue（4.2）。必須欠落・型違い・未知の操作（`questions.delete`）・未知の項目が path 付きで全件出る（3.7、4.3）。省略された配列の正規化。`conditions.attempted` を含む出力ファイルが未知の項目のエラーになる（1.6）
+- `conditions.test.ts`: 下限 > 上限、範囲外、`types` で種類なしのエラー。% と 0〜1 の変換。`toExportFilter` の出力に `attempted` が含まれない（1.5、1.6、1.10）
 - `exportBuild.test.ts`: 階層パス、木の順序、問題ごとの選択肢・フラグのまとめ、無効の問題の `status` と理由、孤立行の除去と、選択肢不足の問題での失敗、2,500 問の入力で欠落・重複なし、ファイル名の置換（2.2〜2.4、2.7、2.9、2.11）
 - `importValidate.test.ts`: 不存在・他科目・削除済みの参照、他の問題の選択肢 ID、循環（新規キーワードを介する循環を含む）、兄弟名の重複（改名と追加の組み合わせ）、一時キーの重複・未定義、同じ問題の修正と無効化、`validateQuestion` のエラー・警告の path 変換、無効の問題の修正の警告（4.4〜4.10、4.12、4.13）
 - `diff.test.ts`: 解説だけの変更が修正になる、選択肢の並べ替え・正解の変更・追加・削除の検出、前後空白だけの違いは変更なし、変更なしの問題が `unchanged`、同一名への改名は数えない、解消予定のフラグ、出力後の更新の警告（5.1〜5.8、8.2、8.3）
@@ -718,14 +731,14 @@ export function toExchangeErrorMessage(context: string, error: { code?: string; 
 
 ### Component Tests
 
-- `ExportPanel.test.tsx`: 条件エラーで出力ボタンが無効、0件の案内（1.9、1.10）
+- `ExportPanel.test.tsx`: 条件エラーで出力ボタンが無効、0件の案内、「出題の有無」の選択がない（1.6、1.9、1.10）
 - `ImportPanel.test.tsx`: エラーありで適用ボタンなし、警告の確認まで無効、適用中の `disabled`、`stale` で再検証ボタン（4.11、5.10、6.8、7.3）
 - `DiffPreview.test.tsx`: 変わった項目だけの前後表示、正解の `mark-correct`、変更なしの区別（5.2、5.6、10.5）
 
 ### E2E Tests（Playwright、ローカル Supabase、直列）
 
 - `exchange.spec.ts`:
-  - 途中のキーワードの範囲・フラグ・正答率の条件で出力し、ダウンロードしたファイルに配下の問題だけ、未解消のフラグだけ、無効の問題なしが含まれる。「無効化された問題を含める」で状態付きで含まれる（1.3〜1.7、2.3〜2.8）
+  - 途中のキーワードの範囲・フラグ・正答率の条件で出力し、ダウンロードしたファイルに配下の問題だけ、未解消のフラグだけ、無効の問題なしが含まれる。出題数の範囲（上限 0 を含む）で絞り込める。「無効化された問題を含める」で状態付きで含まれる（1.3〜1.7、2.3〜2.8）
   - 1,200 問・選択肢 4,800 件の seed で出力し、件数と ID が欠落・重複なく一致する（2.9）
   - キーワードの追加（新規の下に新規）・改名・移動、問題の修正（選択肢の差し替え）・新規（新規キーワードに紐づく）・無効化を含むファイルを取り込み、プレビューの件数・差分を確認して適用し、ID 不変、外された選択肢の `removed_at`、新規 ID の割り当てを DB で確認する（3.2〜3.6、5.1〜5.5、6.1〜6.6）
   - 修正した問題のフラグだけが `resolved` になり、変更なし・無効化・新規の問題のフラグは `open` のまま（8.1〜8.3、8.5）

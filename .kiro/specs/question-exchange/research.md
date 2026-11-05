@@ -94,7 +94,11 @@
 - 出力中の同時変更による不整合 — `buildExportFile` の整合性検査で全体を失敗させ、再試行を促す
 - フォーマット文書と型のドリフト — `formatDoc.test.ts` で項目名・バージョン・例のファイルを照合する
 
-## References
+## 2026-11-05: 要件 1.6 の変更（「未出題かどうか」の削除）
+
+- **Context**: 要件 1.6 の統計条件を正答率の範囲と出題数の範囲だけにした。`attempted` 条件は項目ごと削除する
+- **Findings**: `supabase/migrations` で `attempted` を読むのは `20261106000000_exchange_export.sql` の `export_target_ids` だけ。`src/features/stats` と `QuestionEditPage.tsx` の同名・類似名は無関係
+- **Decisions**: 適用済み migration は編集せず、新しい migration で `export_target_ids` を `create or replace` する。フォーマットの `version` は 1 のまま（実ファイルがなく後方互換が不要）。UI に「未出題だけなら上限 0」の案内は出さない（要件から外したため）
 
 - `.kiro/steering/product.md` — 問題作成の原則、問題フラグの表
 - `.kiro/steering/tech.md` — 交換用 JSON、ページング、RPC の規約

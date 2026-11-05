@@ -158,18 +158,25 @@ src/features/quiz/
 ├── ChoiceList.tsx                        # 選択肢（選択領域と「？」エリア）、「わからない」、判定後の表示、choiceDisplayState
 ├── QuestionStatsBar.tsx                  # 出題中の問題の正答数・出題数・正答率
 ├── AnswerFeedback.tsx                    # 問題の解説、紐づくキーワードの階層パス
-├── FlagForm.tsx                          # フラグのチェックボックス、自由入力、保存
+├── FlagForm.tsx                          # フラグのチェックボックス、自由入力、自動保存の状態表示
+├── flagAutosave.ts                       # フラグの自動保存キュー（直列化・最新値への集約・flush）
 └── SessionSummary.tsx                    # 終了表示（解答数・正答数）
 e2e/
 ├── quiz.spec.ts                          # 範囲選択から解答・判定表示・フラグ・終了までの経路、レスポンシブ
 └── quiz-db.spec.ts                       # RLS、直接書き込みの拒否、冪等性、SRS 計算、集計ビュー、フラグ解消関数の権限
 ```
 
-コンポーネントテスト（`ChoiceList.test.tsx`、`FlagForm.test.tsx`、`QuestionStatsBar.test.tsx`）は各コンポーネントの隣に置く。
+単体テスト `flagAutosave.test.ts` は `flagAutosave.ts` の隣に置く。コンポーネントテスト（`ChoiceList.test.tsx`、`FlagForm.test.tsx`、`QuestionStatsBar.test.tsx`）は各コンポーネントの隣に置く。
 
 ### Modified Files
 
 - `src/app/routes.tsx` — `quiz`（nav: 「出題」、`group: 'learn'`、`icon: GraduationCap`、`order: 1`）と `quiz/play`（nav なし）の2行を追加する
+- 2026-11-05 の要件変更（4.3、5.9、7.2、7.4、7.5、7.9、7.10）で変更するファイル（DB・RPC の変更なし）:
+  - `src/features/quiz/ChoiceList.tsx` — 判定後は「？」エリアを描画せず、同じ位置に ○／× の印の列を置く（4.3、5.9）
+  - `src/features/quiz/FlagForm.tsx` — 保存ボタンを廃止し、チェックの変更と自由入力の blur で自動保存を要求する（7.2、7.4〜7.6、7.9、7.10）
+  - `src/features/quiz/flagAutosave.ts`（新規）— 自動保存キュー
+  - `src/features/quiz/QuizPlayPage.tsx` — 問題ごとに自動保存キューを持ち、「次へ」「終了」の前に `flush` する
+  - `src/features/quiz/ChoiceList.test.tsx`、`FlagForm.test.tsx`、`QuizPlayPage.test.tsx`、`flagAutosave.test.ts`（新規）、`e2e/quiz.spec.ts` — テストの更新
 - `supabase/seed.sql` — E2E 用に、出題対象・無効・削除の問題と途中ノードへの紐づけを含む科目と、1,050 問・1,200 キーワードの大量データ用科目を追加する（ローカル専用）
 
 ## System Flows
@@ -208,8 +215,8 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> open: 保存（チェック・コメント）または「？」エリアの解答
-    open --> [*]: 所有者がチェックを外して保存（行を削除）
+    [*] --> open: チェック・空白以外のコメントの自動保存、または「？」エリアの解答
+    open --> [*]: チェックを外す・コメントを空白にして自動保存（行を削除）
     open --> resolved: 取込で問題を修正（resolve_question_flags）
     resolved --> resolved: 変更しない（履歴）
 ```
@@ -257,7 +264,7 @@ sequenceDiagram
 | 3.7 | 履歴の保持 | quiz_schema | FK `on delete restrict`、上流の論理削除 | — |
 | 4.1 | 固定の「わからない」 | ChoiceList | — | — |
 | 4.2 | わからないの記録 | record_answer、srs_next | `answer_kind = 'unknown'`、評価 `blackout` | — |
-| 4.3 | 「？」エリア | ChoiceList | — | — |
+| 4.3 | 判定前だけの「？」エリア | ChoiceList | `judged` で描画を切り替え | — |
 | 4.4 | ？の記録と guessable | record_answer | `answer_kind = 'guess'` | — |
 | 4.5 | ？は SRS 不変 | record_answer | — | — |
 | 4.6 | 操作領域と境界 | ChoiceList | `.tap-target`、境界線と間隔 | — |
@@ -270,18 +277,21 @@ sequenceDiagram
 | 5.6 | キーワードの階層パス | AnswerFeedback、keywordTree.ts | `keywordPath` | — |
 | 5.7 | 判定前は非表示 | ChoiceList、AnswerFeedback | `phase = 'answering'` | — |
 | 5.8 | 判定後の再選択不可と次へ | ChoiceList、QuizPlayPage | `phase = 'judged'` | — |
+| 5.9 | 判定後の「？」位置の ○／× | ChoiceList | `choiceDisplayState`、`MarkCell` | — |
 | 6.1 | 解答中の成績 | QuestionStatsBar、question_stats | `QuestionStats` | — |
 | 6.2 | 判定後の即時反映 | stats.ts、session.ts、record_answer | `applyAnswerToStats`、返り値 | 出題と解答 |
 | 6.3 | 0件は「未出題」 | stats.ts | `formatCorrectRate` | — |
 | 6.4 | 3種類を数える | question_stats、stats.ts | `answers` の全種類 | — |
 | 7.1 | フラグの入力欄 | FlagForm、flags.ts | `QUESTION_FLAGS` | — |
-| 7.2 | 未解消で記録 | save_question_flags、api.ts | `saveQuestionFlags` | — |
+| 7.2 | チェックで即時記録 | FlagForm、flagAutosave.ts、save_question_flags | `onChangeFlags`、`FlagSaver.setFlags` | — |
 | 7.3 | 重複なしと選択済み表示 | save_question_flags、FlagForm | 部分 unique index、`listOpenFlags` | — |
-| 7.4 | チェックを外す | save_question_flags | 未解消行の削除 | フラグの状態 |
-| 7.5 | 空白コメント | save_question_flags、flags.ts | `normalizeComment` | — |
-| 7.6 | 保存失敗 | FlagForm | — | — |
+| 7.4 | チェックを外すと即時に外す | FlagForm、flagAutosave.ts、save_question_flags | 未解消行の削除 | フラグの状態 |
+| 7.5 | blur で変更時だけコメントを記録 | FlagForm、flagAutosave.ts、flags.ts | `onCommitComment`、`normalizeComment`、保存済みとの比較 | — |
+| 7.6 | 保存失敗と再試行 | FlagForm、flagAutosave.ts、QuizPlayPage | `status = 'failed'`、`retry`、`flush` | — |
 | 7.7 | ？で選択済み | FlagForm、record_answer | `listOpenFlags` | 出題と解答 |
 | 7.8 | 所有者限定 | quiz_schema（RLS） | ポリシー | — |
+| 7.9 | 空白の blur でコメントを外す | FlagForm、flagAutosave.ts、save_question_flags | `p_comment = null` で未解消の `comment` 行を削除 | フラグの状態 |
+| 7.10 | 保存ボタンなし | FlagForm | submit を持たない | — |
 | 8.1 | 取込で解消 | resolve_question_flags | 内部 SQL 関数 | フラグの解消 |
 | 8.2 | 解消済みを保持 | question_flags | `status = 'resolved'` | フラグの状態 |
 | 8.3 | 失敗時は不変 | resolve_question_flags | 呼び出し元トランザクション | フラグの解消 |
@@ -317,10 +327,11 @@ sequenceDiagram
 | api.ts | quiz | DB 呼び出しと変換 | 1.1–1.4, 3.1, 3.4, 7.2–7.6, 9.7, 10.5 | supabase (P0)、pagination (P0) | Service |
 | QuizStartPage / KeywordRangePicker | quiz UI | 範囲選択と開始 | 1.1–1.7, 1.9, 10.5 | api.ts (P0)、keywordTree.ts (P0) | — |
 | QuizPlayPage | quiz UI | 出題のオーケストレーション | 1.7, 2.4, 2.5, 3.3, 3.5, 5.8, 10.2, 10.5, 10.6 | session.ts (P0)、api.ts (P0) | State |
-| ChoiceList | quiz UI | 選択肢・「？」・わからない・正誤表示 | 4.1, 4.3, 4.6, 4.7, 5.1–5.5, 5.7, 5.8, 10.3, 10.4 | 共通 class (P0) | — |
+| ChoiceList | quiz UI | 選択肢・「？」・わからない・正誤表示 | 4.1, 4.3, 4.6, 4.7, 5.1–5.5, 5.7–5.9, 10.3, 10.4 | 共通 class (P0) | — |
 | QuestionStatsBar | quiz UI | 成績表示 | 6.1–6.3 | stats.ts (P0) | — |
 | AnswerFeedback | quiz UI | 解説・階層パス | 5.5–5.7 | keywordTree.ts (P0) | — |
-| FlagForm | quiz UI | フラグ入力と保存 | 7.1–7.7 | flags.ts (P0)、api.ts (P0) | — |
+| FlagForm | quiz UI | フラグ入力と自動保存の状態表示 | 7.1–7.7, 7.9, 7.10 | flags.ts (P0)、flagAutosave.ts (P0) | State |
+| flagAutosave.ts | quiz | 自動保存の直列化と集約 | 7.2, 7.4–7.6, 7.9 | api.ts (P0) | Service |
 | SessionSummary | quiz UI | 終了表示 | 2.5 | — | — |
 | routes.tsx（変更） | app | 導線と保護 | 10.1 | APP_ROUTES (P0) | — |
 
@@ -584,9 +595,10 @@ export function choiceDisplayState(
 ): ChoiceDisplayState;
 ```
 
-- 各選択肢は1行に「選択領域」（本文のボタン、行幅の残り全体）と「？」エリア（右端の独立したボタン、`aria-label="推測で解答: <本文>"`、`HelpCircle` アイコン、最小 44×44px、左側の境界線と 8px 以上の間隔）を持つ（4.3、4.6）。
+- 各選択肢は1行に「選択領域」（本文のボタン、行幅の残り全体）と右端の列を持つ。判定前の右端の列は「？」エリア（独立したボタン、`aria-label="推測で解答: <本文>"`、`HelpCircle` アイコン、最小 44×44px、左側の境界線と 8px 以上の間隔）（4.3、4.6）。
+- 判定後は「？」エリアを描画せず、同じ右端の列に `MarkCell`（ボタンではない `span`、最小幅 44px、左側の境界線を維持）を置く。`mark = 'correct'` は ○（`Circle`）と視覚的に隠した「正解」、`'incorrect'` は ×（`X`）と「不正解」、`null` は空の列（幅は保つ）。「わからない」の行は判定前は右端の列を持たず、判定後に選んでいた場合だけ同じ幅の `MarkCell` に × を出す（4.7、5.9）。列の幅を判定前後で揃え、本文の折り返し位置を変えない。
 - 末尾に固定の「わからない」ボタンを置き、「？」エリアを持たない（4.1、4.7）。
-- 判定後の表示（5.1〜5.4）: 選んだ選択肢に `.choice-selected`。正解の選択肢に `.mark-correct` と ○（`Circle`）。選んだ不正解（「わからない」を含む）に `.mark-incorrect` と ×（`X`）。印には視覚的に隠したテキスト「正解」「不正解」「選択した解答」を付ける。色は `--c-correct`／`--c-incorrect` だけを使い、`--c-warn` を使わない。
+- 判定後の表示（5.1〜5.4、5.9）: 選んだ選択肢に `.choice-selected`。正解の選択肢に `.mark-correct` と右端の ○。選んだ不正解（「わからない」を含む）に `.mark-incorrect` と右端の ×。それ以外は印なし。選んだ選択肢には視覚的に隠した「選択した解答」を本文側に付ける（現行の本文横の `Marks` は廃止し、印は右端の列に一本化する）。色は `--c-correct`／`--c-incorrect` だけを使い、`--c-warn` を使わない。
 - 判定後は各選択肢の枠内に選択肢の解説を表示する（5.5）。判定前は解説・印を描画しない（5.7）。判定後はボタンを `disabled` にする（5.8）。
 - 選択（太枠）と正誤（色＋記号）を別の形状で示し、ライト／ダークの判別は app-foundation のトークンに従う（10.4）。
 
@@ -599,7 +611,54 @@ export function choiceDisplayState(
 #### FlagForm
 
 - 判定後かつ記録成功後に表示する。`listOpenFlags` の結果でチェックボックス（`QUESTION_FLAGS` の表示名）と自由入力を初期化する（7.1、7.3、7.7）。
-- 「フラグを保存」で `saveQuestionFlags` を呼ぶ。送信中は `disabled`。失敗時は入力を保持し、`role="alert"` と再試行を表示する（7.2、7.4〜7.6）。各チェックボックスは `label` 付きで 44px の操作領域を持つ（10.3）。
+
+```typescript
+type Props = {
+  initialFlags: readonly CheckboxFlagId[];
+  initialComment: string | null;
+  status: FlagSaveStatus;                           // flagAutosave の状態
+  onChangeFlags: (flags: CheckboxFlagId[]) => void; // チェックの変更ごとに呼ぶ
+  onCommitComment: (text: string) => void;          // textarea の blur で呼ぶ
+  onRetry: () => void;
+};
+```
+
+- チェックボックスの `onChange` で表示を即時に切り替え、変更後の集合で `onChangeFlags` を呼ぶ。保存中でもチェックボックスは操作可能にし、要求は `flagAutosave` が集約する（7.2、7.4）。
+- 自由入力は入力中は保存しない。`onBlur` で `onCommitComment(text)` を呼び、変更有無の判定（正規化後に最後に保存したコメントと比較）は `flagAutosave` が行う。空白だけなら `null` として送り、未解消の `comment` 行を外す（7.5、7.9）。
+- 保存ボタンと `form` の submit を持たない（Enter で送信しない）（7.10）。
+- 状態表示: `role="status"`（`aria-live="polite"`）の1行に、`saving` は「保存中…」、`saved` は「保存しました」、`idle` は空。`failed` は `role="alert"` にエラー文と「再試行」ボタン（`onRetry`）。失敗中も入力（チェック・テキスト）は保持し、表示は利用者の最新の入力のままにする（7.6）。
+- 各チェックボックスは `label` 付きで 44px の操作領域を持つ（10.3）。
+
+#### flagAutosave.ts
+
+```typescript
+export type FlagSnapshot = { flags: CheckboxFlagId[]; comment: string | null }; // comment は正規化済み
+export type FlagSaveStatus = { kind: 'idle' | 'saving' | 'saved' } | { kind: 'failed'; message: string };
+export type FlagSaver = {
+  setFlags(flags: CheckboxFlagId[]): void;
+  commitComment(text: string): void; // normalizeComment 後、保存済みと同じなら何もしない
+  retry(): void;
+  flush(): Promise<boolean>;         // 実行中と未送信の要求が終わるまで待つ。成功なら true
+  getStatus(): FlagSaveStatus;
+  subscribe(listener: () => void): () => void;
+};
+export function createFlagSaver(
+  initial: FlagSnapshot,
+  save: (s: FlagSnapshot) => Promise<void>, // saveQuestionFlags(questionId, …) を束ねたもの
+): FlagSaver;
+```
+
+- 既存の `save_question_flags`（集合全体を送ると未解消行をその集合に揃える冪等な RPC）をそのまま使い、DB・RPC は変更しない。変更1件ごとの RPC を新設しない。
+- 「最新の希望値（desired）」と「最後に保存に成功した値（saved）」を持つ。同時に実行する RPC は1件だけにし、実行中に変更が来たら desired を上書きするだけにする。実行完了時に desired と送った値が違えば最新の desired を1回送る（直列化と集約。古い要求が後から届いて新しい状態を上書きすることがない）。
+- チェックの保存では comment に blur で確定した値を送り、入力途中のテキストを保存しない（7.5）。
+- 失敗時は `failed` にして自動再送しない。`retry` は最新の desired を送る（7.6）。失敗中に新しい変更が来た場合も最新の desired で再送する。
+- 単体で検証できるよう React に依存しない（`QuizPlayPage` が `useSyncExternalStore` で状態を読む）。
+
+#### QuizPlayPage（フラグの自動保存の追加分）
+
+- `listOpenFlags` の取得後、問題ごとに `createFlagSaver` を1つ作り、`key={current.id}` の `FlagForm` に状態とコールバックを渡す。保存処理は `saveQuestionFlags(current.id, …)`。
+- 「次へ」「終了」のクリック時は `await saver.flush()` してから遷移する。textarea にフォーカスがある状態でこれらを押すと `blur` が `click` より先に発火するため、コメントの要求は `flush` の前にキューに入る。`flush` が `false`（失敗）の場合は遷移せず、`FlagForm` の失敗表示と再試行を残す（7.6）。待機中のボタンは `disabled` にせず二重クリックを無視する（blur 直後の click を失わないため）。
+- ページを閉じる・再読み込みする場合の未送信分は保証しない（チェックと blur は即時に送るため、失われうるのは実行中の要求に限られる）。
 
 #### routes.tsx（変更）
 
@@ -643,7 +702,7 @@ erDiagram
 - 解答の記録失敗: 判定結果の表示を保ち、同じ `clientAnswerId` で再試行する。冪等のため二重記録されない（3.3、3.4）。
 - 出題中に問題が無効化・削除された（`question_not_servable`）: 日本語のメッセージを表示し、「次へ」で `skipUnservable` を実行する。
 - 取得失敗（科目、キーワード、候補、問題）: `role="alert"` と再試行（10.5）。
-- フラグの保存失敗: 入力を保持して再試行（7.6）。
+- フラグの保存失敗: 入力を保持して再試行（7.6）。自動保存のため、失敗中は「次へ」「終了」で遷移せず失敗表示を残す。
 - 直接書き込み（`direct_write_forbidden`）、解消済みフラグの変更（`resolved_flag_immutable`）、内部関数の直接呼び出しは拒否され、UI からは発生しない（3.2、8.2、8.4）。
 
 ### Monitoring
@@ -659,12 +718,14 @@ erDiagram
 - `stats.test.ts`: 正解・誤答の即時反映、出題数 0 で「未出題」、`formatRetention` の3分岐（2.7、6.2〜6.4）
 - `flags.test.ts`: 識別子と表示名の集合が `product.md` の表と一致、`CHECKBOX_FLAG_IDS` に `comment` を含まない、`normalizeComment` の空白処理（7.1、7.5、8.5）
 - `range.test.ts`: URL との往復、不正値で null（1.7、10.6）
+- `flagAutosave.test.ts`: 実行中の変更が集約され最後の値が1回だけ送られる、送信が直列で古い値が後に送られない、blur で保存済みと同じコメント（前後の空白の差だけを含む）は送らない、空白の blur で `comment = null` を送る、チェックの保存は確定済みのコメントを送る、失敗で `failed` になり自動再送しない、`retry` で最新値を送る、`flush` が実行中・未送信の完了を待ち結果を返す（7.2、7.4〜7.6、7.9）
 - `api.test.ts`: 行変換（`correct_rate`・`retention` の null）、`toQuizErrorMessage` の各分岐（3.3、7.6、10.5）
 
 ### Component Tests
 
-- `ChoiceList.test.tsx`: 末尾の「わからない」に「？」がない、判定前に解説・印がない、正解時は選択＋正解、誤答時は選択＋誤答と正解の選択肢に正解表示、「わからない」選択時の表示、判定後のボタン `disabled`、「？」の `aria-label`、`--c-warn` 系の class を使わない（4.1、4.3、4.7、5.1〜5.5、5.7、5.8）
-- `FlagForm.test.tsx`: 未解消フラグの選択済み表示、`guessable` の初期チェック、保存失敗で入力保持（7.1、7.3、7.6、7.7）
+- `ChoiceList.test.tsx`: 末尾の「わからない」に「？」がない、判定前に解説・印がなく「？」がある、判定後に「？」ボタンがなくなり、正解の行に「正解」、選んだ不正解と選んだ「わからない」の行に「不正解」、それ以外の行に印がない（4.3、5.9）、正解時は選択＋正解、誤答時は選択＋誤答と正解の選択肢に正解表示、「わからない」選択時の表示、判定後のボタン `disabled`、「？」の `aria-label`、`--c-warn` 系の class を使わない（4.1、4.3、4.7、5.1〜5.5、5.7、5.8）
+- `FlagForm.test.tsx`: 未解消フラグの選択済み表示、`guessable` の初期チェック、チェックの変更で `onChangeFlags` が呼ばれる、入力中は `onCommitComment` が呼ばれず blur で呼ばれる、保存ボタンがなく Enter で送信しない、`saving`／`saved` の `role="status"` 表示、`failed` で入力保持と再試行（7.1〜7.7、7.9、7.10）
+- `QuizPlayPage.test.tsx`（追加分）: 保存中に「次へ」を押すと完了後に遷移する、保存失敗中は遷移しない（7.6）
 - `QuestionStatsBar.test.tsx`: 未出題の表示と判定後の更新（6.1〜6.3）
 
 ### E2E Tests（Playwright、ローカル Supabase、直列）
@@ -674,7 +735,9 @@ erDiagram
   - 出題対象 0 件の範囲で開始できない（1.6）
   - 開始 → 未出題の問題から出題され、全問解答で終了表示（解答数・正答数）（1.7、2.1、2.5）
   - 正解・誤答・「わからない」・「？」エリアそれぞれで、正誤表示、解説、キーワードの階層パス、成績の即時更新（4.2、4.4、5.1〜5.6、6.1〜6.4）
-  - 「？」エリアの解答後に `guessable` が選択済み、フラグの保存・チェックを外す・空白コメント・再読み込み後の選択済み表示（7.1〜7.5、7.7）
+  - 判定後に「？」ボタンが消え、正解の行に ○、選んだ不正解・「わからない」の行に × が出る（4.3、5.9）
+  - 「？」エリアの解答後に `guessable` が選択済み。保存ボタンがない、チェックだけで DB に未解消で記録され外すと消える、自由入力の blur で記録され同じ内容の再 blur では変わらない、空白にして blur でコメントが消える、textarea にフォーカスしたまま「次へ」を押してもコメントが記録される、再読み込み後の選択済み表示（7.1〜7.5、7.7、7.9、7.10）。既存の「フラグを保存」クリックの手順は、操作後に DB の値を `expect.poll` で待つ形へ置き換える
+  - フラグ保存 RPC をネットワーク遮断で失敗させ、入力保持・再試行の表示、再試行で記録される（7.6）
   - 記録 RPC をネットワーク遮断で失敗させ、記録失敗の表示、「次へ」の無効、再試行で1件だけ記録される（3.3〜3.5）
   - 終了ボタンで範囲選択に戻り、記録済みの解答が成績に残る（10.6）
   - モバイル（390×844）で横スクロールなし、「？」エリアと選択領域が 44px 以上で重ならない、PC（1280×800）で同じ操作、Tab で全操作に到達できフォーカスが見える、学習区分の導線と未ログイン時のリダイレクト、ダークテーマ（`colorScheme: 'dark'`）での表示（1.9、4.6、10.1〜10.4）
