@@ -7,6 +7,8 @@ begin;
 
 -- 既存のデモ科目を消す。保護テーブルは FK が on delete restrict のため、子の行から直接消す
 set local session_replication_role = replica;
+delete from public.question_flags where question_id in (select id from public.questions where subject_id = 'de000000-0000-4000-8000-000000000001');
+delete from public.srs_states where question_id in (select id from public.questions where subject_id = 'de000000-0000-4000-8000-000000000001');
 delete from public.answers where question_id in (select id from public.questions where subject_id = 'de000000-0000-4000-8000-000000000001');
 delete from public.question_keywords where question_id in (select id from public.questions where subject_id = 'de000000-0000-4000-8000-000000000001');
 delete from public.choices where question_id in (select id from public.questions where subject_id = 'de000000-0000-4000-8000-000000000001');
