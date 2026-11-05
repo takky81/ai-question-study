@@ -15,7 +15,6 @@ export function defaultConditions(subjectId: string): ExportConditions {
     correctRateMax: null,
     attemptMin: null,
     attemptMax: null,
-    attempted: null,
     includeDisabled: false,
   };
 }
@@ -75,7 +74,6 @@ export function toExportFilter(c: ExportConditions): Record<string, unknown> {
     correctRateMax: c.correctRateMax,
     attemptMin: c.attemptMin,
     attemptMax: c.attemptMax,
-    attempted: c.attempted,
     includeDisabled: c.includeDisabled,
   };
 }

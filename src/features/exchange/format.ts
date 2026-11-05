@@ -19,7 +19,6 @@ export type ExportConditionsSnapshot = {
   correctRateMax: number | null; // 0〜1
   attemptMin: number | null;
   attemptMax: number | null;
-  attempted: boolean | null;
   includeDisabled: boolean;
 };
 
@@ -115,7 +114,7 @@ export const IMPORT_FIELD_NAMES = fieldNamesOf<ImportFileV1>()([
 export const EXPORT_FIELD_NAMES = fieldNamesOf<ExportFileV1>()([
   'format', 'version', 'exportedAt', 'subject', 'id', 'name',
   'conditions', 'keywordId', 'flag', 'flagTypes', 'correctRateMin', 'correctRateMax',
-  'attemptMin', 'attemptMax', 'attempted', 'includeDisabled',
+  'attemptMin', 'attemptMax', 'includeDisabled',
   'keywords', 'parentId', 'sortOrder', 'path', 'stats', 'questionCount', 'attemptCount', 'correctCount', 'correctRate',
   'questions', 'kind', 'stem', 'explanation', 'keywordIds', 'status', 'disabledReason', 'updatedAt',
   'choices', 'body', 'isCorrect', 'openFlags', 'note', 'createdAt', 'retention',

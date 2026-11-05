@@ -264,10 +264,9 @@ export function ExportPanel({ countDelayMs = 300 }: Props): ReactElement {
               </label>
               <select
                 id={`${id}-attempted`}
-                value={base.attempted === null ? '' : String(base.attempted)}
-                onChange={(e) =>
-                  setBase((b) => ({ ...b, attempted: e.target.value === '' ? null : e.target.value === 'true' }))
-                }
+                // 7.3 で select ごと削除する。条件の型から attempted を外したため、ここでは値を持たない
+                value=""
+                onChange={() => undefined}
                 className={inputClass}
               >
                 {ATTEMPTED_OPTIONS.map((o) => (

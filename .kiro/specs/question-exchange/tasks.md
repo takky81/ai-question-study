@@ -181,7 +181,7 @@
   - _Boundary: supabase/migrations/20261108000000_exchange_drop_attempted.sql_
   - _Requirements: 1.6_
 
-- [ ] 7.2 (P) 型・読み込み検証・条件変換から未出題の条件を外す
+- [x] 7.2 (P) 型・読み込み検証・条件変換から未出題の条件を外す
   - 先に、`conditions.attempted` を含む出力ファイルが未知の項目のエラーになるテストと、`toExportFilter` の出力に `attempted` が含まれないテストを書き、失敗することを確認する
   - `ExportConditionsSnapshot` と `EXPORT_FIELD_NAMES` から `attempted` を削除し、条件スナップショットの検証、既定値、`toExportFilter` からも削除する。`version` は 1 のまま据え置く
   - `conditions.test.ts` と `parse.test.ts` の既存の `attempted` の記述を更新し、ユニットテストと型検査が通る

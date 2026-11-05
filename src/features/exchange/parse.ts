@@ -177,7 +177,6 @@ const exportRoot = obj({
     correctRateMax: nNum,
     attemptMin: nNum,
     attemptMax: nNum,
-    attempted: nullable(bool),
     includeDisabled: bool,
   }),
   keywords: listOf(

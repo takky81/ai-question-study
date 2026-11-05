@@ -28,7 +28,6 @@ describe('defaultConditions', () => {
       correctRateMax: null,
       attemptMin: null,
       attemptMax: null,
-      attempted: null,
       includeDisabled: false,
     });
     expect(validateConditions(defaultConditions('s1'))).toEqual([]);
@@ -87,7 +86,6 @@ describe('toExportFilter', () => {
       [
         'attemptMax',
         'attemptMin',
-        'attempted',
         'correctRateMax',
         'correctRateMin',
         'flag',
@@ -108,7 +106,6 @@ describe('toExportFilter', () => {
           correctRateMax: 0.9,
           attemptMin: 1,
           attemptMax: 10,
-          attempted: true,
           includeDisabled: true,
         }),
       ),
@@ -119,9 +116,11 @@ describe('toExportFilter', () => {
       correctRateMax: 0.9,
       attemptMin: 1,
       attemptMax: 10,
-      attempted: true,
       includeDisabled: true,
     });
+  });
+  it('attempted を含めない', () => {
+    expect(toExportFilter(base())).not.toHaveProperty('attempted');
   });
   it('種類条件以外では種類を空で渡す', () => {
     expect(toExportFilter(base({ flag: 'any', flagTypes: [defaultFlag()] })).flagTypes).toEqual([]);
@@ -130,7 +129,7 @@ describe('toExportFilter', () => {
 
 describe('toSnapshot', () => {
   it('subjectId を除いたスナップショットを作り、戻すと元に戻る', () => {
-    const c = base({ keywordId: 'k1', flag: 'none', correctRateMin: 0.1, attempted: false });
+    const c = base({ keywordId: 'k1', flag: 'none', correctRateMin: 0.1 });
     const snap = toSnapshot(c);
     expect(snap).not.toHaveProperty('subjectId');
     expect({ ...snap, subjectId: 's1' }).toEqual(c);

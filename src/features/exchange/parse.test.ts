@@ -55,7 +55,6 @@ const validExport = {
     correctRateMax: null,
     attemptMin: null,
     attemptMax: null,
-    attempted: true,
     includeDisabled: false,
   },
   keywords: [
@@ -180,6 +179,14 @@ describe('parseExportFile', () => {
 
   it('取込用ファイルは wrong_format', () => {
     expect(codes(parseExportFile(JSON.stringify(validImport)))).toEqual(['wrong_format']);
+  });
+
+  it('条件に attempted を含むファイルは未知の項目として返す', () => {
+    const f = clone(validExport);
+    (f.conditions as Loose).attempted = true;
+    expect(issuesOf(parseExportFile(JSON.stringify(f))).map((i) => [i.path, i.code])).toEqual([
+      ['conditions.attempted', 'unknown_field'],
+    ]);
   });
 
   it('壊れた JSON・対応外バージョン', () => {
