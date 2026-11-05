@@ -174,7 +174,7 @@
 
 - [ ] 7. 変更: 出力条件から「出題の有無」を外す（2026-11-05 の要件 1.6 の変更）
 
-- [ ] 7.1 (P) 出力対象の絞り込みから未出題の条件を外す migration を作る
+- [x] 7.1 (P) 出力対象の絞り込みから未出題の条件を外す migration を作る
   - 先に、`p_filter` に `attempted: true` を渡しても未出題の問題が対象から外れないことを確かめる SQL の検査を書き、現在の関数で失敗することを確認する
   - 新しい migration `20261108000000_exchange_drop_attempted.sql` で `exchange_private.export_target_ids` を同じシグネチャで置き換え、`attempted` の条件とコメントを外し、`revoke`／`grant` を再記述する。適用済みの migration は編集しない
   - ローカル DB の再作成後、`attempted` の有無で対象の問題 ID が変わらず、正答率・出題数の条件は従来どおり効くことが SQL で確認できる
