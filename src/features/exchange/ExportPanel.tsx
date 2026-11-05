@@ -23,11 +23,6 @@ const FLAG_OPTIONS: { value: ExportConditions['flag']; label: string }[] = [
   { value: 'none', label: '未解消のフラグがない' },
   { value: 'types', label: '種類を指定' },
 ];
-const ATTEMPTED_OPTIONS: { value: '' | 'false' | 'true'; label: string }[] = [
-  { value: '', label: '指定しない' },
-  { value: 'false', label: '未出題のみ' },
-  { value: 'true', label: '出題済みのみ' },
-];
 const NUM_FIELDS: { field: NumField; label: string; percent: boolean }[] = [
   { field: 'correctRateMin', label: '正答率の下限（%）', percent: true },
   { field: 'correctRateMax', label: '正答率の上限（%）', percent: true },
@@ -259,22 +254,6 @@ export function ExportPanel({ countDelayMs = 300 }: Props): ReactElement {
                   </div>
                 ))}
               </div>
-              <label htmlFor={`${id}-attempted`} className="text-sm">
-                出題の有無
-              </label>
-              <select
-                id={`${id}-attempted`}
-                // 7.3 で select ごと削除する。条件の型から attempted を外したため、ここでは値を持たない
-                value=""
-                onChange={() => undefined}
-                className={inputClass}
-              >
-                {ATTEMPTED_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
             </fieldset>
 
             <label className="tap-target flex items-center gap-2">

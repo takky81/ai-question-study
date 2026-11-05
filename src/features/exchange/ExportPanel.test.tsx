@@ -57,6 +57,13 @@ describe('ExportPanel', () => {
     expect(m.countExportQuestions).toHaveBeenLastCalledWith(expect.objectContaining({ subjectId: 's1', keywordId: null }));
   });
 
+  it('「出題の有無」の選択を置かない（1.6）', async () => {
+    await setup();
+    await screen.findByText('5 問が一致します');
+    expect(screen.queryByLabelText('出題の有無')).not.toBeInTheDocument();
+    expect(screen.queryByText('出題の有無')).not.toBeInTheDocument();
+  });
+
   it('木で範囲を選ぶと件数を取り直し、矢印キーで移動できる', async () => {
     const user = await setup();
     await user.click(screen.getByRole('treeitem', { name: 'ネットワーク' }));
