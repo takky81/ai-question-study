@@ -237,7 +237,7 @@
   - _Boundary: scripts/authoring/blindJudge.ts, scripts/authoring/judgeRunner.ts_
   - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.9, 13.11_
 
-- [ ] 8.4 判定の CLI と claude -p の呼び出しを作る
+- [x] 8.4 判定の CLI と claude -p の呼び出しを作る
   - `judgeRunner.ts` の `claudeInvoke` に、design どおりのオプションと環境変数（`MAX_THINKING_TOKENS=0`、`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`）、標準入力でのプロンプト、OS の一時ディレクトリでの実行、`result` の取り出しを作る
   - `scripts/authoring/judge-import.ts` に CLI を作る（`--only`、`--out`、`--concurrency`、`--model`、`--only` のときの結果のマージ、要約、`unparsed`・エラーがあれば終了コード 2）
   - 完了: 2問の取込用 JSON で実際に実行し、`judge.json` に2問ぶんの判定が書かれ、要約に判定数・推測できる数・手がかり別の内訳とトークン数の目安が出ることを確認して、結果を Implementation Notes に記録する
@@ -289,3 +289,4 @@
 - 6.2: 取込 E2E は実行ごとに exchange-imp- 接頭辞の科目を作って afterAll で消す（seed は触らない）。23505 は制約名で文言を分ける（keywords_sibling_name_key はキーワード名、choices_question_one_correct_key は正解1つ、それ以外は汎用）。
 - 6.3: 例の取込用 JSON の E2E は、実行ごとに作る科目の ID へ例の ID を置き換えて取り込む。basedOnExportedAt が古いため警告は必ず出る前提で検査する。
 - 手動の動作確認は E2E 用の seed 科目（「E2E 〜」「統計検証」）で行わない。解答やフラグが残ると seed の期待値に頼る E2E が失敗する。手動確認には supabase/demo-data.sql のデモ科目を使い、崩れたら db reset の後にデモデータを入れ直す。
+- 8.4: claude は C:\Users\takas\.local\bin\claude.exe（shell なしの spawn で空文字の引数も渡る。.cmd の shim は未対応）。2問の実実行（Haiku 5.5）で約 1,170 トークン/問・約 2.5 秒/問。著作権の例は semantic で推測できる、CPI の例は推測できないと正しく判定。judge-import は未知の --only の ref と壊れた既存結果ファイルで終了コード 1。
