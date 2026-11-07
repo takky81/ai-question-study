@@ -591,7 +591,7 @@ export function toQuizErrorMessage(context: string, error: { code?: string; mess
 - 判定後の「次へ」の固定表示（5.10、5.11、2026-11-07）:
   - 位置: 「次へ」を包む `div` に、判定後（`phase = 'judged'`）だけ `position: fixed` の class を付ける。`sticky` は採らない（`section` の中でしか効かず、内容が短いと右下に来ない。`main` の `flex-1` に依存する）。
   - オフセット: モバイル（`lg` 未満）は `right: 1rem`、`bottom: calc(4rem + env(safe-area-inset-bottom))`。下部導線（`AppLayout` の `fixed bottom-0 z-20 lg:hidden`、高さは `tap-target` の 44px と上ボーダー 4px と区切り線 1px で約 49px、その下に `pb-[env(safe-area-inset-bottom)]`）の上に 15px 前後の間隔を空ける。PC（`lg` 以上）は下部導線がないため `right: 1.5rem`、`bottom: 1.5rem`。Tailwind の任意値 class（例: `fixed right-4 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 lg:right-6 lg:bottom-6`）で書き、共通レイアウトは変更しない。下部導線を表示しない場合（学習区分の導線が0件）もモバイルのオフセットは同じとする（余白が増えるだけで重ならない）。
-  - 重なり: 判定中は `section` の末尾に `aria-hidden` の空の `div`（高さ `h-20`、80px）を置く。`main` の下余白（モバイル `pb-24`、PC `pb-4`）と合わせ、最下部までスクロールしたとき最後の内容（`FlagForm` と状態表示）が「次へ」の上端より上に来る（モバイル: 96px + 80px ≥ 64px + 44px + 余白、PC: 16px + 80px ≥ 24px + 44px + 余白）。判定前はスペーサーも固定もしない。
+  - 重なり: 判定中は `section` の末尾に `aria-hidden` の空の `div`（高さ `h-20`、80px）を置く。`main` の下余白（モバイル `pb-24`、PC `pb-4`）と合わせ、最下部までスクロールしたとき最後の内容（`FlagForm` と状態表示）が「次へ」の上端より上に来る（モバイル: 96px + 80px ≥ 64px + 44px + 余白、PC: 16px + 80px ≥ 24px + 44px + 余白）。判定前は「次へ」とスペーサーを描画しない（5.8）。判定直後、解答の記録が終わるまでは「次へ」を非活性にする。
   - 重なり順: `z-10`。ヘッダー（`sticky top-0 z-20`、モバイルのメニューを含む）と下部導線（`z-20`）より下にし、メニューを開いたときに覆わない。確認ダイアログは `<dialog>` のモーダル（top layer）なので影響しない。
   - 見た目と操作: 既存の `BUTTON`（`tap-target` で 44×44px 以上、`focus-ring` の 2px アウトライン）と `bg-primary` の不透明な背景を維持し、固定の親に `overflow` を付けずフォーカスリングを切らない。ライト・ダークとも `--c-primary` と `--c-bg` の組み合わせのまま。
   - フォーカス順: DOM の位置（`FlagForm` の後）は変えず、CSS の配置だけを変える。Tab 順は 10.3 のまま。「終了」ボタンの位置、「次へ」を判定後にだけ出す規則、`leaveAfterFlush` の動作は変えない。
@@ -737,7 +737,7 @@ erDiagram
 
 - `ChoiceList.test.tsx`: 末尾の「わからない」に「？」がない、判定前に解説・印がなく「？」がある、判定後に「？」ボタンがなくなり、正解の行に「正解」、選んだ不正解と選んだ「わからない」の行に「不正解」、それ以外の行に印がない（4.3、5.9）、正解時は選択＋正解、誤答時は選択＋誤答と正解の選択肢に正解表示、「わからない」選択時の表示、判定後のボタン `disabled`、「？」の `aria-label`、`--c-warn` 系の class を使わない（4.1、4.3、4.7、5.1〜5.5、5.7、5.8）
 - `FlagForm.test.tsx`: 未解消フラグの選択済み表示、`guessable` の初期チェック、チェックの変更で `onChangeFlags` が呼ばれる、入力中は `onCommitComment` が呼ばれず blur で呼ばれる、保存ボタンがなく Enter で送信しない、`saving`／`saved` の `role="status"` 表示、`failed` で入力保持と再試行（7.1〜7.7、7.9、7.10）
-- `QuizPlayPage.test.tsx`（追加分）: 保存中に「次へ」を押すと完了後に遷移する、保存失敗中は遷移しない（7.6）。判定前は「次へ」の包みに `fixed` がなくスペーサーもない、判定後は `fixed` の class とスペーサーが付き、「次へ」が DOM 上で `FlagForm` の後にある（5.10、5.11、10.3）
+- `QuizPlayPage.test.tsx`（追加分）: 保存中に「次へ」を押すと完了後に遷移する、保存失敗中は遷移しない（7.6）。判定前は「次へ」とスペーサーがない、判定後は `fixed` の class とスペーサーが付き、「次へ」が DOM 上で `FlagForm` の後にある（5.10、5.11、10.3）
 - `QuestionStatsBar.test.tsx`: 未出題の表示と判定後の更新（6.1〜6.3）
 
 ### E2E Tests（Playwright、ローカル Supabase、直列）

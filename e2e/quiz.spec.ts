@@ -277,7 +277,7 @@ test.describe('範囲選択から終了まで', () => {
     await expect(statsBar(page)).toHaveText('正答 0 / 出題 0（未出題）');
     await expect(page.getByText('問1の正解の解説')).toHaveCount(0);
     await expect(page.getByRole('region', { name: '解説' })).toHaveCount(0);
-    await expect(nextButton(page)).toBeDisabled();
+    await expect(nextButton(page)).toHaveCount(0); // 判定前は表示しない（5.8）
 
     // 正解（5.1、5.4〜5.6、6.1、6.2）
     await page.getByRole('button', { name: '問1の正解', exact: true }).click();

@@ -306,18 +306,22 @@ export function QuizPlayPage(): ReactElement | null {
                 onRetry={flags.saver.retry}
               />
             ))}
-          <div className={judged ? NEXT_DOCK : undefined}>
-            <button
-              type="button"
-              disabled={!judged || state.recordStatus !== 'saved'}
-              onClick={() => void leaveAfterFlush(() => dispatch({ type: 'next' }))}
-              className={`${BUTTON} border-primary bg-primary font-bold text-bg`}
-            >
-              次へ
-            </button>
-          </div>
-          {/* 固定した「次へ」が最後の内容を覆わないための余白（5.11） */}
-          {judged && <div aria-hidden="true" data-testid="next-dock-spacer" className="h-20" />}
+          {/* 「次へ」は判定後だけ表示する（5.8）。固定した「次へ」が最後の内容を覆わないよう末尾に余白を置く（5.11） */}
+          {judged && (
+            <>
+              <div className={NEXT_DOCK}>
+                <button
+                  type="button"
+                  disabled={state.recordStatus !== 'saved'}
+                  onClick={() => void leaveAfterFlush(() => dispatch({ type: 'next' }))}
+                  className={`${BUTTON} border-primary bg-primary font-bold text-bg`}
+                >
+                  次へ
+                </button>
+              </div>
+              <div aria-hidden="true" data-testid="next-dock-spacer" className="h-20" />
+            </>
+          )}
         </>
       )}
     </section>

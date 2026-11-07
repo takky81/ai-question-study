@@ -110,11 +110,12 @@ describe('QuizPlayPage', () => {
     renderPage();
     const s1 = await firstStem();
     await waitFor(() => expect(screen.getByRole('heading', { name: s1 })).toHaveFocus());
-    const next = screen.getByRole('button', { name: '次へ' });
-    expect(next).toBeDisabled();
+    // 判定前は「次へ」を表示しない（5.8）
+    expect(screen.queryByRole('button', { name: '次へ' })).toBeNull();
     await user.click(screen.getByRole('button', { name: `${s1}正解` }));
     expect(await screen.findByText(`${s1}の解説`)).toBeInTheDocument();
     await screen.findByLabelText('問う価値が低い');
+    const next = screen.getByRole('button', { name: '次へ' });
     await waitFor(() => expect(next).toBeEnabled());
     await user.click(next);
 
@@ -130,13 +131,13 @@ describe('QuizPlayPage', () => {
     expect(m.listOpenFlags).toHaveBeenCalledTimes(2);
   });
 
-  it('判定後だけ「次へ」を右下に固定し、末尾にスペーサーを置く。「次へ」は DOM 上で FlagForm の後にある（5.10、5.11、10.3）', async () => {
+  it('「次へ」は判定後だけ表示して右下に固定し、末尾にスペーサーを置く。「次へ」は DOM 上で FlagForm の後にある（5.8、5.10、5.11、10.3）', async () => {
     const user = userEvent.setup();
     const { container } = renderPage();
     const s1 = await firstStem();
     const dock = () => screen.getByRole('button', { name: '次へ' }).parentElement as HTMLElement;
     const spacer = () => container.querySelector('[data-testid="next-dock-spacer"]');
-    expect(dock()).not.toHaveClass('fixed');
+    expect(screen.queryByRole('button', { name: '次へ' })).toBeNull();
     expect(spacer()).toBeNull();
 
     await user.click(screen.getByRole('button', { name: `${s1}正解` }));
@@ -275,8 +276,8 @@ describe('QuizPlayPage', () => {
     resolveSave();
     const s2 = s1 === '問1' ? '問2' : '問1';
     await screen.findByRole('heading', { name: s2 });
-    // 二重クリックで2問目まで飛ばされず、2問目は未解答のまま
-    expect(screen.getByRole('button', { name: '次へ' })).toBeDisabled();
+    // 二重クリックで2問目まで飛ばされず、2問目は未解答のまま（判定前なので「次へ」は表示されない）
+    expect(screen.queryByRole('button', { name: '次へ' })).toBeNull();
     expect(m.getQuizQuestion).toHaveBeenCalledTimes(2);
   });
 
