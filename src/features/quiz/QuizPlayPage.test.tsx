@@ -130,6 +130,33 @@ describe('QuizPlayPage', () => {
     expect(m.listOpenFlags).toHaveBeenCalledTimes(2);
   });
 
+  it('判定後だけ「次へ」を右下に固定し、末尾にスペーサーを置く。「次へ」は DOM 上で FlagForm の後にある（5.10、5.11、10.3）', async () => {
+    const user = userEvent.setup();
+    const { container } = renderPage();
+    const s1 = await firstStem();
+    const dock = () => screen.getByRole('button', { name: '次へ' }).parentElement as HTMLElement;
+    const spacer = () => container.querySelector('[data-testid="next-dock-spacer"]');
+    expect(dock()).not.toHaveClass('fixed');
+    expect(spacer()).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: `${s1}正解` }));
+    const flagInput = await screen.findByLabelText('問う価値が低い');
+    await waitFor(() => expect(screen.getByRole('button', { name: '次へ' })).toBeEnabled());
+    expect(dock()).toHaveClass(
+      'fixed',
+      'right-4',
+      'bottom-[calc(4rem+env(safe-area-inset-bottom))]',
+      'z-10',
+      'lg:right-6',
+      'lg:bottom-6',
+    );
+    expect(spacer()).toHaveAttribute('aria-hidden', 'true');
+    expect(spacer()).toHaveClass('h-20');
+    const next = screen.getByRole('button', { name: '次へ' });
+    expect(flagInput.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('button', { name: '終了' }).parentElement).not.toHaveClass('fixed');
+  });
+
   it('記録失敗で失敗表示を出して次へを不可にし、再試行は同じ冪等キーで送る', async () => {
     const user = userEvent.setup();
     m.recordAnswer.mockRejectedValueOnce(new Error('network'));

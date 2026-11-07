@@ -32,6 +32,8 @@ import { SessionSummary } from './SessionSummary';
 import type { AnswerKind } from './types';
 
 const BUTTON = 'tap-target focus-ring rounded border px-4 disabled:opacity-50';
+// 判定後の「次へ」を右下に固定する。モバイルは下部導線（AppLayout の lg:hidden）の上、PC は右下（5.10、5.11）
+const NEXT_DOCK = 'fixed right-4 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 lg:right-6 lg:bottom-6';
 
 function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -304,7 +306,7 @@ export function QuizPlayPage(): ReactElement | null {
                 onRetry={flags.saver.retry}
               />
             ))}
-          <div>
+          <div className={judged ? NEXT_DOCK : undefined}>
             <button
               type="button"
               disabled={!judged || state.recordStatus !== 'saved'}
@@ -314,6 +316,8 @@ export function QuizPlayPage(): ReactElement | null {
               次へ
             </button>
           </div>
+          {/* 固定した「次へ」が最後の内容を覆わないための余白（5.11） */}
+          {judged && <div aria-hidden="true" data-testid="next-dock-spacer" className="h-20" />}
         </>
       )}
     </section>
