@@ -212,6 +212,61 @@
   - _Depends: 7.1, 7.3_
   - _Requirements: 1.6_
 
+- [ ] 8. 拡張: 出典資料からの作成と推測できる問題の検出（Requirement 11〜14）
+
+- [ ] 8.1 スクリプトのテスト基盤と取込用 JSON の読み取りを作る
+  - `vite.config.ts` のユニットテストの対象に `scripts/**/*.test.ts` を加える
+  - `scripts/authoring/importModel.ts` に、取込用 JSON から作成・修正の問題を取り出す最小の型と `extractQuestions` を作る（`src/` は import しない）
+  - 完了: `importModel.test.ts` で、作成・修正の問題だけが取り出され、`tempKey` のない作成は `create#<n>` になり、対応外の `format`・`version` で `ok: false` になることが `npm test` で通る
+  - _Boundary: scripts/authoring/importModel.ts, vite.config.ts_
+  - _Requirements: 12.1, 13.1_
+
+- [ ] 8.2 (P) 推測の機械的な点検を作る
+  - `scripts/authoring/guessLint.ts` に、文字種の連続と2文字以上の部分文字列による語の取り出しと、6種類の規則（stem_overlap、length_outlier、form_outlier、absolute_word、containment、full_name）を純粋関数で作る。しきい値と一般語の除外リストは定数にまとめる
+  - `scripts/authoring/lint-import.ts` に CLI を作る（`<import>.lint.json` と件数の要約、警告ありでも終了コード 0、読めない・対応外は 1）
+  - 完了: `guessLint.test.ts` で規則ごとに警告が出る例と出ない例が通り、`node scripts/authoring/lint-import.ts .claude/skills/question-authoring/references/example-import.json` が要約を出して終了コード 0 で終わる
+  - _Depends: 8.1_
+  - _Boundary: scripts/authoring/guessLint.ts, scripts/authoring/lint-import.ts_
+  - _Requirements: 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8_
+
+- [ ] 8.3 (P) 問題ごとの判定の入力・解釈・並列実行を作る
+  - `scripts/authoring/blindJudge.ts` に、システムプロンプト、問題文と並べ替えた選択肢だけのプロンプト、`parseJudgeAnswer`、元の位置に戻して正解と照合する `interpret` を作る
+  - `scripts/authoring/judgeRunner.ts` に、差し替え可能な `Invoke`、並列数を守る `runJudges`（読めない応答は1回だけ再実行、なお読めなければ `unparsed`、失敗は `error`）を作る
+  - 完了: `blindJudge.test.ts` と `judgeRunner.test.ts` が通る（プロンプトに正解・解説が含まれない、手がかりが誤答を指すと `guessable: false`、並列数を超えない、`unparsed` に生の応答と順序と正解の位置が残る）
+  - _Depends: 8.1_
+  - _Boundary: scripts/authoring/blindJudge.ts, scripts/authoring/judgeRunner.ts_
+  - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.9, 13.11_
+
+- [ ] 8.4 判定の CLI と claude -p の呼び出しを作る
+  - `judgeRunner.ts` の `claudeInvoke` に、design どおりのオプションと環境変数（`MAX_THINKING_TOKENS=0`、`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`）、標準入力でのプロンプト、OS の一時ディレクトリでの実行、`result` の取り出しを作る
+  - `scripts/authoring/judge-import.ts` に CLI を作る（`--only`、`--out`、`--concurrency`、`--model`、`--only` のときの結果のマージ、要約、`unparsed`・エラーがあれば終了コード 2）
+  - 完了: 2問の取込用 JSON で実際に実行し、`judge.json` に2問ぶんの判定が書かれ、要約に判定数・推測できる数・手がかり別の内訳とトークン数の目安が出ることを確認して、結果を Implementation Notes に記録する
+  - _Depends: 8.3_
+  - _Boundary: scripts/authoring/judgeRunner.ts, scripts/authoring/judge-import.ts_
+  - _Requirements: 13.1, 13.9, 13.11_
+
+- [ ] 8.5 問題生成 skill に出典モードと点検・判定の手順を加える
+  - `.claude/skills/question-authoring/SKILL.md`（英語）に、出典モードの入力と手順 1〜8、用語ではない語の扱い、誤答の差し替え方針（実在の紛らわしい語 → 難しければ実在しない語と解説への明記）、5回の打ち切り、`unparsed` の読み取り、報告項目を加える。既存の修正モードにも点検と判定の手順を加える
+  - `allowed-tools` に2つのスクリプトの実行だけを足す
+  - 既存の `skillDoc.test.ts` を、追加した契約（出典モード、2つのスクリプト、5回、報告項目）も検査するよう更新する
+  - 完了: `npm test` で `skillDoc.test.ts` が通り、`allowed-tools` に2つのスクリプト以外のシェル操作がない
+  - _Depends: 8.2, 8.4_
+  - _Boundary: .claude/skills/question-authoring/SKILL.md, src/features/exchange/skillDoc.test.ts_
+  - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 11.10, 11.11, 12.1, 12.9, 13.6, 13.7, 13.8, 13.10, 14.2_
+
+- [ ] 8.6 作業用の場所と steering を整える
+  - `.gitignore` に `exchange-data/` があることを確認し、`git ls-files exchange-data` が空であることを確認する
+  - `.kiro/steering/structure.md` に `scripts/authoring/` と `exchange-data/` の役割を追記する
+  - 完了: `git check-ignore exchange-data/x.json` が一致し、structure.md に2つの場所が記載されている
+  - _Boundary: .kiro/steering/structure.md_
+  - _Requirements: 14.1_
+
+- [ ] 8.7 最初の中分類で受け入れ確認をする
+  - シラバスのテキストを `exchange-data/応用情報技術者試験/syllabus.txt` に置き、所有者が作った科目の空の出力 JSON を使って、skill の出典モードで「中分類 1：基礎理論」の取込用 JSON を作る
+  - 完了: 取込用 JSON がアプリの検証でエラー0になり、報告に用語数・問題数・点検の警告と対応・判定の内訳・作り直しの回数の分布・未判定の問題が出る。誤検出の割合と1問あたりのトークン数を Implementation Notes に記録し、しきい値の調整が必要かを判断する
+  - _Depends: 8.5, 8.6_
+  - _Requirements: 11.1, 12.1, 13.1, 13.10_
+
 ## Implementation Notes
 
 - 1.1: export の p_filter のキーは flag / flagTypes / correctRateMin / correctRateMax / attemptMin / attemptMax / attempted / includeDisabled（2.1 の toExportFilter はこの名前で出す）。無効の問題は question_stats に行がないため集計値は 0・null（design どおり。4.2 の SKILL.md に一言添える）。

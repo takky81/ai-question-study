@@ -103,3 +103,22 @@
 - `.kiro/steering/product.md` — 問題作成の原則、問題フラグの表
 - `.kiro/steering/tech.md` — 交換用 JSON、ページング、RPC の規約
 - `.kiro/specs/subject-catalog/design.md`、`.kiro/specs/quiz-session/design.md`、`.kiro/specs/app-foundation/design.md` — 上流契約
+
+## 2026-11-07: 出典資料からの作成と推測できる問題の検出（Requirement 11〜14）
+
+- **Context**: 応用情報技術者試験のシラバスから問題を作る。推測で解ける問題を取込前に減らす
+- **形態素解析を使わない判断**: 辞書（IPAdic など）は専門用語を未知語にしたり細かく分けたりし、重なりを見たい用語に弱い。文字種の連続と2文字以上の部分文字列なら語の境目のずれも拾え、依存も増えない。一般語の重なりは除外リストで抑える。最初の中分類で誤検出が多ければ再検討する
+- **判定を1問ずつにする判断**: まとめて判定させると見落としが増えた経験（所有者）による。1問ずつ独立した文脈で、正解を見せずに判定させ、正解との照合はスクリプトで行う
+- **claude -p の調査（CLI 2.1.270）**:
+  - `--bare` は認証が `ANTHROPIC_API_KEY` に限られ、サブスクリプションのログインを使えない
+  - `--system-prompt` で差し替え、`--tools ""`、`--strict-mcp-config`、`--setting-sources ""`、`--no-session-persistence` で前置きを削れる。`--json-schema` で出力を固定でき、結果は `structured_output` に入る
+  - `--effort low` だけでは思考トークンが約 1,000 出た。環境変数 `MAX_THINKING_TOKENS=0` で 0 になった
+  - 実測（1問）: 入力約 2,400、出力約 500 トークン、定価換算 約 0.005 USD。`haiku` の別名は claude-haiku-4-5 に解決された。`claude-haiku-5-5` は CLI が `unrecognized_model` の警告を出すが実際には実行される（料金表に未登録なだけ）。実測（Haiku 5.5、1問）: 入力約 1,500、出力約 400〜500（`MAX_THINKING_TOKENS=0` でも思考が約 250〜400 出る）、別に CLI 内部の Haiku 4.5 の呼び出しが約 950 入力ある。定価換算 約 0.01 USD／問。判定の質は著作権の例で一般的な意味の手がかりだけを正しく指摘し、4.5 より観点の区別が明確だった。既定は 5.5 とし、`--model` で 4.5 に切り替えられるようにする
+  - Windows で引数に日本語を渡すと出力表示の文字コードが崩れることがあるため、プロンプトは標準入力で渡す
+  - 判定例: 定義どおりの説明文に対し「命令パイプライン」を見た目・意味の両方で選んだ。Haiku が知識で解いた可能性もあるため、誤検出の割合を最初の中分類で確認する
+- **スクリプトの置き場所**: `scripts/authoring/` に Node.js 24 の型除去で動く `.ts` を置く。`tsconfig.node.json` はすでに `scripts/**/*.ts` を型検査の対象に含む。`src/` は `@/` 別名を Node から解決できないため import しない
+- **出典テキスト**: PDF からのテキスト化は所有者の準備作業とし、`exchange-data/<試験名>/` に置く。`exchange-data/` はすでに `.gitignore` に含まれる
+- **トークン削減の追加調査（Haiku 5.5）**:
+  - CLI 内部の Haiku 4.5 の呼び出し（約 950 入力）は `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` で止まり、メインの入力も 1,449 → 1,180 に減った。判定結果には影響しない
+  - 思考トークンは `MAX_THINKING_TOKENS=0`、`alwaysThinkingEnabled: false` のどちらでも 0 にならない（約 280〜420）。Haiku 5.5 はモデル側で思考する。`--effort low` が最小
+  - `--json-schema` を外すと入力が約 550 減る。形の崩れはスクリプトの検証と1回の再実行、それでも読めない応答は skill の実行者が生の応答を読んで吸収する（毎回の生の応答はメインのモデルに読ませない）

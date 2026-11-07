@@ -689,6 +689,192 @@ export function toExchangeErrorMessage(context: string, error: { code?: string; 
 
 - `exchange-format.md` に `EXCHANGE_FORMAT` の値、`EXCHANGE_VERSION`、`ImportFileV1`・`ExportFileV1` の全プロパティ名が現れることを検査する（型のプロパティ名は `format.ts` に置く定数配列 `IMPORT_FIELD_NAMES`、`EXPORT_FIELD_NAMES` と照合する）。`example-import.json` を `parseImportFile` で読み、`ok: true` になることを検査する（3.9）。
 
+## 拡張: 出典資料からの作成と推測できる問題の検出（Requirement 11〜14）
+
+問題生成 skill に「出典資料からの新規作成」の手順を足し、書き出した取込用 JSON を2段階の推測検出にかける。アプリ（`src/`）・DB・交換用 JSON のフォーマットは変更しない。
+
+### 拡張の境界
+
+- **この拡張が持つもの**: skill の新規作成手順、推測の機械的な点検スクリプト、問題ごとの判定スクリプト、作業用の場所（`exchange-data/`）の管理対象外の設定
+- **持たないもの**: 取込画面での警告表示、交換用 JSON のフォーマットの変更（`version` は 1 のまま）、出典資料の入手と PDF からのテキスト化（所有者の準備作業とする）、計算を要する問題の作成
+- **許可する依存**: スクリプトは Node.js 24 の型除去で `.ts` を直接実行し、npm 依存を増やさない。問題ごとの判定は、所有者がログイン済みの Claude Code CLI（`claude -p`）を子プロセスとして呼ぶ。スクリプトは `src/` を import しない（`@/` 別名を Node から解決できず、アプリの束に影響させないため）。取込用 JSON の読み取りに必要な最小の型をスクリプト側に持つ
+- **再検証の契機**: 交換用 JSON の問題・選択肢の項目名が変わったとき（スクリプトの最小の型を合わせる）、`product.md` の「問題作成の原則」が変わったとき（点検の規則と skill の手順を合わせる）、Claude Code CLI のオプションが変わったとき（判定の呼び出しを合わせる）
+
+### 全体の流れ
+
+```mermaid
+flowchart TD
+  A[所有者: 科目を作り空の出力 JSON を得る] --> B[skill: 出典テキストの対象範囲を読む]
+  B --> C[skill: キーワードの木と問題を作り取込用 JSON を書く]
+  C --> D[lint-import: 機械的な点検]
+  D -->|警告あり| E[skill: 作り直す または理由を記録]
+  E --> D
+  D -->|警告なし・理由記録済み| F[judge-import: 1問ずつ判定]
+  F -->|推測できる 5回未満| G[skill: 誤答を差し替えて作り直す]
+  G --> D
+  F -->|全問 判定済み| H[skill: 報告]
+  H --> I[所有者: アプリで検証・プレビュー・取込]
+```
+
+- 作り直した問題は機械的な点検からやり直し、問題ごとの判定は作り直した問題だけを `--only` で再判定する
+- 問題ごとの作り直しの回数は skill が数え、5回で打ち切る（13.7）
+
+### 拡張のファイル構成
+
+```text
+scripts/authoring/
+├── importModel.ts          # 取込用 JSON から問題（作成・修正）を取り出す最小の型と関数
+├── importModel.test.ts
+├── guessLint.ts            # 推測の機械的な点検の規則（純粋関数）
+├── guessLint.test.ts
+├── lint-import.ts          # CLI: 取込用 JSON を点検し、警告を JSON と要約で出す
+├── blindJudge.ts           # 判定の入力の組み立て・並べ替え・結果の解釈（純粋関数）
+├── blindJudge.test.ts
+├── judgeRunner.ts          # claude -p の呼び出しと並列実行（呼び出しは差し替え可能）
+├── judgeRunner.test.ts
+└── judge-import.ts         # CLI: 取込用 JSON の問題を1問ずつ判定し、結果を JSON で出す
+```
+
+変更するファイル:
+
+- `.claude/skills/question-authoring/SKILL.md`: 出典モードの手順、点検と判定の手順、報告項目を追加。`allowed-tools` に2つのスクリプトの実行だけを足す
+- `vite.config.ts`: ユニットテストの対象に `scripts/**/*.test.ts` を加える
+- `.gitignore`: `exchange-data/` はすでに含まれる（14.1）。変更なし
+- `.kiro/steering/structure.md`: `scripts/authoring/` と `exchange-data/` の役割を追記
+
+### 拡張のコンポーネント
+
+#### importModel.ts
+
+```ts
+export type AuthoredChoice = { body: string; explanation: string; isCorrect: boolean };
+export type AuthoredQuestion = {
+  ref: string; // 作成は tempKey、修正は id
+  kind: 'keyword' | 'feature';
+  stem: string;
+  explanation: string;
+  choices: AuthoredChoice[];
+};
+export function extractQuestions(
+  file: unknown,
+): { ok: true; questions: AuthoredQuestion[] } | { ok: false; error: string };
+```
+
+- `questions.create` と `questions.update` だけを取り出す。`format`・`version` が対応外なら `ok: false`
+- 作成で `tempKey` がない問題は、配列の位置から `create#<n>` を ref にする
+
+#### guessLint.ts（12.2〜12.8）
+
+```ts
+export type LintKind =
+  | 'stem_overlap'
+  | 'length_outlier'
+  | 'form_outlier'
+  | 'absolute_word'
+  | 'containment'
+  | 'full_name';
+export type LintWarning = { kind: LintKind; choiceIndex: number | null; terms: string[] };
+export function lintQuestion(q: AuthoredQuestion, options?: LintOptions): LintWarning[];
+```
+
+- **語の取り出し**: 文字列を文字種（漢字・カタカナ・英数字）の連続に区切り、各連続から2文字以上の部分文字列（英数字は語単位）を作る。形態素解析は使わない（research.md 参照）。一般語の除外リスト（「処理」「方式」「データ」など）は `LintOptions` の既定値として持つ
+- **stem_overlap（12.2）**: 正解と問題文に共通する語の最長の長さが2以上で、どの誤答の共通語の最長よりも長いとき
+- **length_outlier（12.3）**: 選択肢の文字数の中央値に対し、正解だけが 1.8 倍以上または 0.5 倍以下のとき（feature 型のみ。keyword 型の語の長さは対象外）
+- **form_outlier（12.4）**: 選択肢の末尾2文字の文字種と文字列で仲間を作り、1つだけ仲間外れの選択肢があるとき（その選択肢が正解・誤答のどちらでも警告する）
+- **absolute_word（12.5）**: 断定語（「必ず」「すべて」「常に」「一切」「絶対」「のみ」）が誤答にだけ現れるとき
+- **containment（12.6）**: ある選択肢の本文が別の選択肢の本文を含むとき
+- **full_name（12.7）**: 英大文字2文字以上の略語に対し、各文字で始まる英単語の並びが問題文・選択肢に現れるとき（例: `CPI` と `Cycles Per Instruction`）
+- しきい値は定数としてまとめ、最初の中分類の結果で調整できるようにする
+
+#### lint-import.ts
+
+- `node scripts/authoring/lint-import.ts <import.json> [--out <path>]`
+- 警告のある問題ごとに `{ ref, warnings }` を JSON に書き（既定は `<import>.lint.json`）、標準出力に件数の要約を出す。警告があっても終了コードは 0（警告であり、作り直さない判断を skill に許すため。12.9）。ファイルが読めない・対応外のときだけ 1
+
+#### blindJudge.ts（13.2〜13.5）
+
+```ts
+export type CueKind = 'surface' | 'semantic';
+export type JudgeAnswer = { surface: number | null; semantic: number | null; reason: string };
+export type JudgeInput = { prompt: string; order: number[] }; // order[表示位置] = 元の選択肢の位置
+export function buildJudgeInput(q: AuthoredQuestion, random: () => number): JudgeInput;
+export function interpret(
+  answer: JudgeAnswer,
+  input: JudgeInput,
+  q: AuthoredQuestion,
+): { guessable: boolean; cues: CueKind[]; reason: string };
+export const JUDGE_SYSTEM_PROMPT: string;
+export function parseJudgeAnswer(text: string): JudgeAnswer | null; // 1行の JSON を検証して読む
+```
+
+- プロンプトは問題文と番号付きの選択肢だけ（13.2）。正解・解説・キーワード・種別は入れない。並びは問題ごとに入れ替える（13.3）
+- システムプロンプトは、知識のない受験者として、見た目の手がかりと一般的な意味の手がかりのそれぞれで絞れる選択肢番号を答えさせる（13.4）。出力は指示で1行の JSON `{"surface":n|null,"semantic":n|null,"reason":"…"}` に限り、`reason` は 30 文字以内とする（13.9）。`--json-schema` は入力が約 550 トークン増えるため使わず、`parseJudgeAnswer` で形と番号の範囲を検証する
+- `interpret` は番号を元の位置に戻し、正解と一致した手がかりだけを数える。1つ以上一致すれば `guessable: true`（13.5）
+
+#### judgeRunner.ts と judge-import.ts（13.1、13.9、13.11）
+
+```ts
+export type Invoke = (systemPrompt: string, prompt: string) => Promise<string>; // モデルの応答本文
+export function claudeInvoke(model: string): Invoke; // 実際の claude -p 呼び出し
+export function runJudges(
+  questions: AuthoredQuestion[],
+  invoke: Invoke,
+  concurrency: number,
+  random: () => number,
+): Promise<JudgeResult[]>;
+export type JudgeResult =
+  | { ref: string; status: 'judged'; guessable: boolean; cues: CueKind[]; reason: string }
+  | { ref: string; status: 'unparsed'; raw: string; order: number[]; correctIndex: number }
+  | { ref: string; status: 'error'; message: string };
+```
+
+- `claudeInvoke` は1問ごとに新しいプロセスを起動し、文脈を共有しない（13.1）。呼び出しは次のとおり（CLI 2.1.270 で確認）:
+  - `claude -p --model claude-haiku-5-5 --effort low --system-prompt <JUDGE_SYSTEM_PROMPT> --tools "" --strict-mcp-config --setting-sources "" --no-session-persistence --output-format json`
+  - 環境変数 `MAX_THINKING_TOKENS=0` と `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` を付ける（後者は CLI の補助的な Haiku 4.5 の呼び出し約 950 トークンを止める）。プロンプトは標準入力で渡す（Windows の引数の文字コード問題を避ける）
+  - 作業ディレクトリは OS の一時ディレクトリにし、`CLAUDE.md` を読ませない
+  - モデルは `--model` で切り替えられるようにし、既定は `claude-haiku-5-5` とする。CLI はこの ID に `unrecognized_model` の警告を標準エラーに出すが、実行はされる（標準エラーは捨て、終了コードと標準出力の JSON で判断する）
+  - `--bare` は API キーが必須でサブスクリプションのログインを使えないため使わない
+  - CLI の出力 JSON の `result` を応答本文として返す。非0終了・`is_error` は例外にし、`status: 'error'` とする
+- `runJudges` は応答を `parseJudgeAnswer` で読み、読めなければ1回だけ再実行する。それでも読めなければ `status: 'unparsed'` として生の応答・並びの順序・正解の位置を残す
+- `runJudges` は既定の並列数 3 で実行する。1問の失敗で全体を止めない
+- `judge-import.ts`: `node scripts/authoring/judge-import.ts <import.json> [--only <ref,...>] [--out <path>] [--concurrency <n>] [--model <id>]`。結果を `<import>.judge.json` に書き（`--only` のときは既存の結果へ問題単位で上書きマージ）、判定数・推測できる数・手がかり別の内訳・エラー数を標準出力に出す。`unparsed` とエラーの件数も出す。どちらかが1件でもあれば終了コード 2（13.11）
+
+#### question-authoring skill の変更（11.1〜11.11、12.1、12.9、13.6〜13.8、13.10、14.2）
+
+- 入力に「出典モード」を加える: `<export-json-path> source=<text-path> range=<範囲>`。範囲は中分類1つまで。それを超えたら書かずに分割を求める（11.8）
+- 手順:
+  1. 出典テキストの対象範囲を読み、階層（大分類 > 中分類 > 小分類 > 項目 > 細目 > 用語）を取り出す
+  2. 出力 JSON の既存キーワードと名前・位置で突き合わせ、既存は `id`、新規は `tempKey` で `keywords.add` に書く（11.2）。同じ用語が別の項目にあれば別のキーワードにする（11.4）。略語とフルネームの併記は略語だけを名前にする（11.5）
+  3. 用語かどうかを判断する（11.9、11.10）。用語なら正解とする keyword 型を1問以上、重要なら feature 型を足す。用語でなく価値のある内容なら中身を問う問題、価値がなければ作らない
+  4. 問題は最下層のキーワードに紐づける。用語例のない項目は項目に紐づける（11.3）。出典の文章は写さない（11.6、14.2）。計算が必要な用語は作らず理由を記録する（11.7）
+  5. 取込用 JSON を書き、`lint-import.ts` を実行する。警告は作り直すか、作り直さない理由を記録する（12.1、12.9）
+  6. `judge-import.ts` を実行し、推測できる問題は誤答を、一般的な意味でも当てはまりそうな実在の語、難しければ正解と同じ語の部品で作った実在しない語に差し替える。実在しない語の選択肢の解説に、実在しない語であることを書く（13.6、13.8）。作り直した問題は手順 5 から再実行し、問題ごとに5回で打ち切る（13.7）
+  7. `unparsed` の問題は生の応答を読み、選んだ番号が読み取れれば並びの順序で元の位置に戻して正解と照合し、判定済みとして扱う。読み取れなければ `--only` で再判定する。エラーや読み取れない応答が残る場合は、取込用 JSON を判定済みとして扱わず、未判定の問題を報告する（13.11）
+  8. 報告: 用語数、キーワード数、問題数、作れなかった用語と理由、用語ではない語とその扱い（11.9〜11.11）、点検の警告と対応、判定数・推測できる数・手がかり別の内訳・作り直しの回数の分布・解消しなかった問題（13.10）
+- `allowed-tools` に `Bash(node scripts/authoring/lint-import.ts:*)` と `Bash(node scripts/authoring/judge-import.ts:*)` だけを足す。それ以外のシェル操作は持たない
+- 既存の修正モード（Requirement 9）も、書き出し後に同じ点検と判定を通す（12.1、13.1 は「作成・修正した問題」が対象のため）
+
+### 拡張の要件対応
+
+| Requirement | 対応 |
+| --- | --- |
+| 11.1〜11.11 | skill の出典モードの手順 1〜4、8 |
+| 12.1、12.9 | skill の手順 5 |
+| 12.2〜12.8 | `guessLint.ts`、`lint-import.ts` |
+| 13.1〜13.5、13.9、13.11 | `blindJudge.ts`、`judgeRunner.ts`、`judge-import.ts` |
+| 13.6〜13.8、13.10 | skill の手順 6〜8 |
+| 14.1 | `.gitignore` の `exchange-data/`（既存） |
+| 14.2 | skill の手順 4 |
+
+### 拡張のテスト
+
+- `importModel.test.ts`: 作成・修正の問題だけを取り出すこと、`tempKey` がない作成の ref、対応外の `format`・`version` で `ok: false`
+- `guessLint.test.ts`: 規則ごとに、警告が出る例と出ない例（正解と誤答が同程度に問題文と重なる場合は出ない、一般語だけの重なりは出ない、keyword 型の長さの差は出ない、など）
+- `blindJudge.test.ts`: `parseJudgeAnswer` が前後の余分な文字や範囲外の番号を扱えること、プロンプトに正解・解説が含まれないこと、並べ替えの結果を元の位置に戻せること、手がかりが誤答を指すときは `guessable: false`、正解を指すときは手がかりの種類つきで `true`
+- `judgeRunner.test.ts`: 差し替えた `Invoke` で、並列数を超えて同時に呼ばないこと、1問の失敗が `error` になり他の問題は判定されること、読めない応答は1回だけ再実行し、なお読めなければ `unparsed` に生の応答と順序が残ること
+- 実際の `claude -p` の呼び出しは自動テストにしない（費用とログインが必要なため）。実装時に1問で手動確認する
+- 最初の中分類「基礎理論」での実行を受け入れ確認とし、警告と判定の件数・誤検出の割合を記録して、しきい値を調整する
+
 ## Data Models
 
 ### Domain Model
