@@ -65,11 +65,12 @@ Use this section instead of Steps 3 and 4 when `source=` is given.
    - The same term under different items becomes separate keywords, one under each item
    - When the source lists an abbreviation with its full name, name the keyword with the abbreviation only, and write the full name in the explanations
 3. Decide whether each entry is a term
-   - For a term, write at least one `keyword` question whose correct answer is that term. For an important term, add a `feature` question
+   - For a term, write at least one question about it. The question does not have to make the term itself the correct answer: a `feature` question about the term, or a question whose correct answer is another word that can only be chosen with knowledge of the term, is also fine. For an important term, add more questions
+   - When a term's name literally spells out its meaning (for example 和集合, 温度センサー, スタートビット), a question that names the term from its definition is guessable. Prefer a `feature` question or a question with another correct answer for such terms, or use wrong choices with the same literal structure
    - Non-term entries, such as category catch-alls (「その他のソート」) or situation descriptions (「サーバーへの利用集中」), are never a correct answer. If their content is worth learning, write a question that asks about that content; otherwise make no question and list the entry in the report
 4. Link each question to the deepest keyword it is about: the term keyword, or the item keyword when the item has no terms
    - Never copy sentences from the source text into stems, choices, explanations, or any other output. Write in your own words
-   - Do not make questions for terms that can only be asked as a calculation; record the term and the reason for the report
+   - For terms that need a calculation, do not ask for a concrete value. Ask about the calculation method instead (the form of the formula, the procedure, or the meaning of the values used), usually as a `feature` question. Only when even the method cannot be asked as a multiple-choice question, make no question and record the term and the reason for the report
 
 Then continue with Step 5.
 
@@ -129,6 +130,7 @@ Run this in both modes, after the lint.
 2. For each question judged guessable, replace the wrong choices, in this order of preference:
    - Real terms that are easy to confuse with the correct answer and that also fit the stem by their everyday meaning
    - If those cannot be found, non-existent terms built from the same word parts as the correct answer. State in that choice's explanation that the term does not exist
+   - If replacing wrong choices cannot remove the cue (for example, the term's name literally spells out the stem), change how the question asks instead: ask about a feature of the term, or make another word the correct answer
 3. After rewriting, update the import JSON, re-run Step 8, then re-judge only the rewritten questions with `node scripts/authoring/judge-import.ts <import.json> --only <refs>` (comma-separated refs from the judge output). This merges the new results into the existing `<import>.judge.json`
 4. Allow at most 5 rewrites per question. After the fifth, stop rewriting that question and list it as unresolved in the report
 5. For an `unparsed` result, read its raw response (`raw`). If a chosen number can be read, map it back to the original position through `order` and compare it with `correctIndex`; treat the question as judged. If it cannot be read, re-run that question with `--only`
@@ -140,7 +142,7 @@ Report, in Japanese:
 
 - The written file path, and the lint and judge result files
 - Counts of updated, created, and disabled questions, and of keyword additions, renames, and moves
-- In source mode: term count, keyword count, question count, terms not made and the reasons (for example calculation-only), and non-term entries with how each was handled (asked about its content, or skipped)
+- In source mode: term count, keyword count, question count, terms not made and the reasons (for example a calculation whose method cannot be asked either), calculation-method questions made, and non-term entries with how each was handled (asked about its content, or skipped)
 - Lint warnings and the response to each (rewritten, or kept with a reason)
 - Judging: judged count, guessable count with the breakdown by cue, rewrite-count distribution, unresolved questions (still guessable after 5 rewrites), and unjudged questions (errors or unreadable responses)
 - Every place where you departed from the principles (fewer choices, more than one piece of information, a comment you did not follow) and why

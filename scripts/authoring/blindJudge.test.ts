@@ -27,6 +27,29 @@ describe('JUDGE_SYSTEM_PROMPT', () => {
     expect(JUDGE_SYSTEM_PROMPT).toContain('semantic');
     expect(JUDGE_SYSTEM_PROMPT).toContain('reason');
   });
+
+  it('知識で分かる答えを knowledge に分けさせる', () => {
+    expect(JUDGE_SYSTEM_PROMPT).toContain('knowledge');
+  });
+});
+
+describe('knowledge 欄', () => {
+  it('knowledge が正解を指しても推測できるとしない', () => {
+    const q = {
+      ref: 'q',
+      kind: 'keyword' as const,
+      stem: 's',
+      explanation: 'e',
+      choices: [
+        { body: 'A', explanation: 'x', isCorrect: true },
+        { body: 'B', explanation: 'x', isCorrect: false },
+      ],
+    };
+    const input = { prompt: '', order: [0, 1] };
+    const answer = parseJudgeAnswer('{"knowledge":1,"surface":null,"semantic":null,"reason":"r"}', 2);
+    expect(answer).not.toBeNull();
+    expect(interpret(answer!, input, q).guessable).toBe(false);
+  });
 });
 
 describe('buildJudgeInput', () => {

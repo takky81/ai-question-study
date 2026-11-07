@@ -267,6 +267,13 @@
   - _Depends: 8.5, 8.6_
   - _Requirements: 11.1, 12.1, 13.1, 13.10_
 
+- [x] 8.8 判定の指示に knowledge 欄を加え、作問方針を skill に反映する（2026-11-08 の要件 11.7、11.12、13.4、13.6 の変更）
+  - `JUDGE_SYSTEM_PROMPT` に `knowledge` を加え、知識で分かる答えを推測の手がかりとして数えない
+  - SKILL.md に、用語そのものを正解にしない問い方、字面どおりの用語の扱い、計算方法を問う問題、誤答の差し替えで解消しない場合の問い方の変更を加える
+  - 完了: `knowledge` が正解を指しても推測できるとしないテストが通り、`skillDoc.test.ts` を含む `npm test` が通る
+  - _Boundary: scripts/authoring/blindJudge.ts, .claude/skills/question-authoring/SKILL.md_
+  - _Requirements: 11.7, 11.12, 13.4, 13.6_
+
 ## Implementation Notes
 
 - 1.1: export の p_filter のキーは flag / flagTypes / correctRateMin / correctRateMax / attemptMin / attemptMax / attempted / includeDisabled（2.1 の toExportFilter はこの名前で出す）。無効の問題は question_stats に行がないため集計値は 0・null（design どおり。4.2 の SKILL.md に一言添える）。

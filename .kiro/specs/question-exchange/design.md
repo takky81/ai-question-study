@@ -808,7 +808,7 @@ export function parseJudgeAnswer(text: string, choiceCount: number): JudgeAnswer
 ```
 
 - プロンプトは問題文と番号付きの選択肢だけ（13.2）。正解・解説・キーワード・種別は入れない。並びは問題ごとに入れ替える（13.3）
-- システムプロンプトは、知識のない受験者として、見た目の手がかりと一般的な意味の手がかりのそれぞれで絞れる選択肢番号を答えさせる（13.4）。出力は指示で1行の JSON `{"surface":n|null,"semantic":n|null,"reason":"…"}` に限り、`reason` は 30 文字以内とする（13.9）。`--json-schema` は入力が約 550 トークン増えるため使わず、`parseJudgeAnswer` で形と番号の範囲を検証する
+- システムプロンプトは、知識のない受験者として、見た目の手がかりと一般的な意味の手がかりのそれぞれで絞れる選択肢番号を答えさせる（13.4）。判定するモデル自身の知識で分かる番号は `knowledge` として別に答えさせ、`interpret` では数えない（知識で解けた答えを semantic と申告する誤検出を防ぐ。research.md 参照）。出力は指示で1行の JSON `{"surface":n|null,"semantic":n|null,"reason":"…"}` に限り、`reason` は 30 文字以内とする（13.9）。`--json-schema` は入力が約 550 トークン増えるため使わず、`parseJudgeAnswer` で形と番号の範囲を検証する
 - `interpret` は番号を元の位置に戻し、正解と一致した手がかりだけを数える。1つ以上一致すれば `guessable: true`（13.5）
 
 #### judgeRunner.ts と judge-import.ts（13.1、13.9、13.11）

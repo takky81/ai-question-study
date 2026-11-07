@@ -4,13 +4,14 @@ export type CueKind = 'surface' | 'semantic';
 export type JudgeAnswer = { surface: number | null; semantic: number | null; reason: string };
 export type JudgeInput = { prompt: string; order: number[] }; // order[表示位置] = 元の選択肢の位置
 
-// 入力トークンを抑えるため短く保つ（13.4、13.9）
+// 入力トークンを抑えるため短く保つ（13.4、13.9）。knowledge は知識で解けた答えの逃がし先で、interpret では数えない
 export const JUDGE_SYSTEM_PROMPT = [
-  'あなたは分野の知識が全くない受験者。文面だけを見て答える。',
-  'surface: 見た目の手がかり（問題文との語の重なり、長さ、形の違い、「必ず」「すべて」などの断定語）だけで正解と絞れる選択肢番号。',
-  'semantic: 語の日常的な意味だけで問題文に合う選択肢が1つに絞れるときの番号（例: 絵や音楽の権利→著作権。人権・生存権は合わない）。',
+  'あなたは分野の知識が全くない受験者を演じる。専門用語の意味は知らないものとする。',
+  'knowledge: あなた自身の専門知識で正解と分かる選択肢番号（分からなければ null）。推測の手がかりとしては数えない。',
+  'surface: 知識を使わず、見た目の手がかり（問題文と同じ語や字が選択肢に含まれる、長さ、形の違い、断定語）だけで正解と絞れる番号。',
+  'semantic: 知識を使わず、選択肢の語を日常語として読んだ意味（漢字やカタカナの字面）だけで問題文に合うのが1つしかない番号（例: 絵や音楽の権利→著作権）。専門用語の定義を知っていて分かる場合は semantic ではなく knowledge にする。',
   '絞れなければ null。',
-  '出力は1行の JSON のみ: {"surface":番号|null,"semantic":番号|null,"reason":"30字以内"}',
+  '出力は1行の JSON のみ: {"knowledge":番号|null,"surface":番号|null,"semantic":番号|null,"reason":"30字以内"}',
 ].join('\n');
 
 export function buildJudgeInput(q: AuthoredQuestion, random: () => number): JudgeInput {
