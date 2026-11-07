@@ -254,7 +254,7 @@
   - _Boundary: .claude/skills/question-authoring/SKILL.md, src/features/exchange/skillDoc.test.ts_
   - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 11.10, 11.11, 12.1, 12.9, 13.6, 13.7, 13.8, 13.10, 14.2_
 
-- [ ] 8.6 作業用の場所と steering を整える
+- [x] 8.6 作業用の場所と steering を整える
   - `.gitignore` に `exchange-data/` があることを確認し、`git ls-files exchange-data` が空であることを確認する
   - `.kiro/steering/structure.md` に `scripts/authoring/` と `exchange-data/` の役割を追記する
   - 完了: `git check-ignore exchange-data/x.json` が一致し、structure.md に2つの場所が記載されている

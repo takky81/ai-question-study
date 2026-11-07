@@ -40,6 +40,9 @@ feature-first と共通ユーティリティの組み合わせを採用する。
 **場所**: `.claude/skills/<skill名>/`（生成 skill）、`src/features/exchange/`（交換用 JSON スキーマの型とスキーマ検証。作問ルールの検証は catalog の関数を使う）
 **規則**: 交換フォーマットの型は exchange の feature が所有する。skill はその契約と、product.md の問題作成の原則に従って JSON を出力する。出力・生成したデータファイルはソースとして扱わず、コミットしない。
 
+- `scripts/authoring/`: skill が実行する作問の補助スクリプト（推測の機械的な点検、問題ごとの判定）。Node.js の型除去で `.ts` を直接実行する。`src/` は import しない（`@/` 別名を Node から解決できないため）。テストは同じ場所の `*.test.ts`
+- `exchange-data/`: 出典資料（シラバスなど）と出力・取込用 JSON の作業用の場所。中身は種類によらず `.gitignore` で管理対象から外す（出典は第三者の著作物のため）
+
 ### 検証資産
 
 - `e2e/`: Playwright による利用者経路と DB 統合のテスト
