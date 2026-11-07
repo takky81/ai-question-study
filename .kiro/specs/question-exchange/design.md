@@ -804,7 +804,7 @@ export function interpret(
   q: AuthoredQuestion,
 ): { guessable: boolean; cues: CueKind[]; reason: string };
 export const JUDGE_SYSTEM_PROMPT: string;
-export function parseJudgeAnswer(text: string): JudgeAnswer | null; // 1行の JSON を検証して読む
+export function parseJudgeAnswer(text: string, choiceCount: number): JudgeAnswer | null; // 1行の JSON を検証して読む（番号は 1〜choiceCount）
 ```
 
 - プロンプトは問題文と番号付きの選択肢だけ（13.2）。正解・解説・キーワード・種別は入れない。並びは問題ごとに入れ替える（13.3）

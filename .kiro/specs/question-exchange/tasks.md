@@ -229,7 +229,7 @@
   - _Boundary: scripts/authoring/guessLint.ts, scripts/authoring/lint-import.ts_
   - _Requirements: 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8_
 
-- [ ] 8.3 (P) 問題ごとの判定の入力・解釈・並列実行を作る
+- [x] 8.3 (P) 問題ごとの判定の入力・解釈・並列実行を作る
   - `scripts/authoring/blindJudge.ts` に、システムプロンプト、問題文と並べ替えた選択肢だけのプロンプト、`parseJudgeAnswer`、元の位置に戻して正解と照合する `interpret` を作る
   - `scripts/authoring/judgeRunner.ts` に、差し替え可能な `Invoke`、並列数を守る `runJudges`（読めない応答は1回だけ再実行、なお読めなければ `unparsed`、失敗は `error`）を作る
   - 完了: `blindJudge.test.ts` と `judgeRunner.test.ts` が通る（プロンプトに正解・解説が含まれない、手がかりが誤答を指すと `guessable: false`、並列数を超えない、`unparsed` に生の応答と順序と正解の位置が残る）
