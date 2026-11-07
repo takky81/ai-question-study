@@ -597,6 +597,52 @@ test.describe('レスポンシブ・キーボード・テーマ・導線', () =>
     await expect(page).toHaveURL(/\/quiz(\?|$)/);
     await expectNoHorizontalScroll(page);
   });
+
+  test('判定後の「次へ」が判定直後も最下部までスクロール後も右下にあり、下部導線と自由入力欄に重ならない', async ({
+    page,
+  }, testInfo) => {
+    const mobile = testInfo.project.name === 'mobile';
+    await openPlay(page, uiSubject.id);
+    await expect(page.getByRole('heading', { name: '表示問', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '表示問の誤答', exact: true }).click();
+    await waitSaved(page);
+    const viewport = page.viewportSize()!;
+
+    const expectDocked = async () => {
+      const box = (await nextButton(page).boundingBox())!;
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      // ビューポート内で、右下の象限にある（5.10）
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+      expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+      expect(box.x + box.width / 2).toBeGreaterThan(viewport.width / 2);
+      expect(box.y + box.height / 2).toBeGreaterThan(viewport.height / 2);
+      if (mobile) {
+        // モバイルは下部導線の上にある（5.11）
+        const bar = (await page.getByRole('navigation', { name: '学習ナビゲーション', exact: true }).boundingBox())!;
+        expect(box.y + box.height).toBeLessThan(bar.y);
+      }
+      return box;
+    };
+
+    // 判定直後
+    await expectDocked();
+
+    // 最下部までスクロールした後も同じ位置にあり、自由入力欄が「次へ」の上端より上に来る（5.11）
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1,
+        ),
+      )
+      .toBe(true);
+    const box = await expectDocked();
+    const comment = (await page.getByRole('textbox', { name: '疑義の内容（自由入力）' }).boundingBox())!;
+    expect(comment.y + comment.height).toBeLessThan(box.y);
+  });
 });
 
 test.describe('未ログイン', () => {
