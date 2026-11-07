@@ -245,7 +245,7 @@
   - _Boundary: scripts/authoring/judgeRunner.ts, scripts/authoring/judge-import.ts_
   - _Requirements: 13.1, 13.9, 13.11_
 
-- [ ] 8.5 問題生成 skill に出典モードと点検・判定の手順を加える
+- [x] 8.5 問題生成 skill に出典モードと点検・判定の手順を加える
   - `.claude/skills/question-authoring/SKILL.md`（英語）に、出典モードの入力と手順 1〜8、用語ではない語の扱い、誤答の差し替え方針（実在の紛らわしい語 → 難しければ実在しない語と解説への明記）、5回の打ち切り、`unparsed` の読み取り、報告項目を加える。既存の修正モードにも点検と判定の手順を加える
   - `allowed-tools` に2つのスクリプトの実行だけを足す
   - 既存の `skillDoc.test.ts` を、追加した契約（出典モード、2つのスクリプト、5回、報告項目）も検査するよう更新する

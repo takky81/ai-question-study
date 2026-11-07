@@ -1,18 +1,26 @@
 ---
 name: question-authoring
-description: Read an export JSON written by the app's import/export screen and write an import JSON that creates, fixes, or disables questions according to the authoring principles. Use when the owner passes an export JSON path and a request for new or revised questions.
-allowed-tools: Read, Write, Glob
-argument-hint: <export-json-path> <request>
+description: Read an export JSON written by the app's import/export screen and write an import JSON that creates, fixes, or disables questions according to the authoring principles, either from a request (modify mode) or from a range of a source text (source mode), then lint and blind-judge the written questions. Use when the owner passes an export JSON path and a request, or an export JSON path with source=<text-path> range=<range>.
+allowed-tools: Read, Write, Glob, Bash(node scripts/authoring/lint-import.ts:*), Bash(node scripts/authoring/judge-import.ts:*)
+argument-hint: <export-json-path> <request> | <export-json-path> source=<text-path> range=<range>
 ---
 
 # question-authoring
 
-Turn an export JSON into an import JSON that the owner imports through the app. This skill only reads and writes local files. It has no database, network, or shell access, never touches credentials, and never imports anything itself: the owner validates, previews, and applies the file in the app.
+Turn an export JSON into an import JSON that the owner imports through the app. This skill reads and writes local files and runs exactly two local scripts: `scripts/authoring/lint-import.ts` (mechanical guessability lint) and `scripts/authoring/judge-import.ts` (blind judging). It has no other shell access and no database or network access of its own, never touches credentials, and never imports anything itself: the owner validates, previews, and applies the file in the app.
 
 ## Inputs
 
-- `<export-json-path>`: path to an export JSON (`format` `ai-question-study/export`). Use Glob to locate it if the owner gives only a name or folder
-- `<request>`: what the owner wants, for example "fix the flagged questions" or "add questions about keyword X". If empty, work on the questions with open flags
+The skill has two modes.
+
+- Modify mode: `<export-json-path> <request>`
+  - `<export-json-path>`: path to an export JSON (`format` `ai-question-study/export`). Use Glob to locate it if the owner gives only a name or folder
+  - `<request>`: what the owner wants, for example "fix the flagged questions" or "add questions about keyword X". If empty, work on the questions with open flags
+- Source mode: `<export-json-path> source=<text-path> range=<range>`
+  - `source=<text-path>`: a source text (syllabus or similar) under `exchange-data/`, which is git-ignored. Never copy its text into any output (see Source mode)
+  - `range=<range>`: the part of the source to cover, at most one 中分類 (middle category). If the range covers more than one 中分類, do not write any file; stop and ask the owner to split the range into one 中分類 per run
+
+Steps 1, 2, and 5 to 10 apply to both modes. Steps 3 and 4 apply to modify mode; source mode replaces them with the Source mode section.
 
 ## Step 1: Read the rules
 
@@ -47,6 +55,23 @@ Turn an export JSON into an import JSON that the owner imports through the app. 
 | `comment` | Read the free-text comment and address what it points out. If it is unclear or you disagree, say so in the report |
 
 A question may have several flags; address all of them. Flags of updated questions are resolved by the app automatically, so never try to write flags.
+
+## Source mode
+
+Use this section instead of Steps 3 and 4 when `source=` is given.
+
+1. Read the target range of the source text and extract its hierarchy: 大分類 > 中分類 > 小分類 > 項目 > 細目 > 用語 (terms). Build the keyword tree from the hierarchy down to the terms
+2. Match the tree against the export's existing keywords by name and position. Reuse an existing keyword by its `id`; add a new one to `keywords.add` with a `tempKey`
+   - The same term under different items becomes separate keywords, one under each item
+   - When the source lists an abbreviation with its full name, name the keyword with the abbreviation only, and write the full name in the explanations
+3. Decide whether each entry is a term
+   - For a term, write at least one `keyword` question whose correct answer is that term. For an important term, add a `feature` question
+   - Non-term entries, such as category catch-alls (「その他のソート」) or situation descriptions (「サーバーへの利用集中」), are never a correct answer. If their content is worth learning, write a question that asks about that content; otherwise make no question and list the entry in the report
+4. Link each question to the deepest keyword it is about: the term keyword, or the item keyword when the item has no terms
+   - Never copy sentences from the source text into stems, choices, explanations, or any other output. Write in your own words
+   - Do not make questions for terms that can only be asked as a calculation; record the term and the reason for the report
+
+Then continue with Step 5.
 
 ## Step 5: Write the content
 
@@ -89,12 +114,35 @@ Fix any failure before writing.
 - Set `format` to `ai-question-study/import`, `version` to `1`, `subjectId` to the export's `subject.id`, and `basedOnExportedAt` to the export's `exportedAt`
 - If the target file already exists, ask before overwriting it. If you cannot ask (non-interactive run), write `<name>.import-2.json` (or the next free number) instead and say so in the report
 
-## Step 8: Report
+## Step 8: Lint the import JSON
+
+Run this in both modes, after writing the import JSON.
+
+1. Run `node scripts/authoring/lint-import.ts <import.json>`. It writes the warnings per question to `<import>.lint.json` and prints a summary. Exit code 0 means it ran (warnings may still exist); exit code 1 means the file could not be read or is unsupported, so fix the file first
+2. For each warning, rewrite the question, or record why you keep it as is (for the report)
+
+## Step 9: Blind-judge the import JSON
+
+Run this in both modes, after the lint.
+
+1. Run `node scripts/authoring/judge-import.ts <import.json>`. It writes per-question results to `<import>.judge.json` and prints the judged count, guessable count, cue breakdown, and the counts of `error` and `unparsed`. Exit code 2 means at least one `error` or `unparsed` result remains
+2. For each question judged guessable, replace the wrong choices, in this order of preference:
+   - Real terms that are easy to confuse with the correct answer and that also fit the stem by their everyday meaning
+   - If those cannot be found, non-existent terms built from the same word parts as the correct answer. State in that choice's explanation that the term does not exist
+3. After rewriting, update the import JSON, re-run Step 8, then re-judge only the rewritten questions with `node scripts/authoring/judge-import.ts <import.json> --only <refs>` (comma-separated refs from the judge output). This merges the new results into the existing `<import>.judge.json`
+4. Allow at most 5 rewrites per question. After the fifth, stop rewriting that question and list it as unresolved in the report
+5. For an `unparsed` result, read its raw response (`raw`). If a chosen number can be read, map it back to the original position through `order` and compare it with `correctIndex`; treat the question as judged. If it cannot be read, re-run that question with `--only`
+6. If `error` results or unreadable responses remain, do not treat the import JSON as judged, and list the unjudged questions in the report
+
+## Step 10: Report
 
 Report, in Japanese:
 
-- The written file path
+- The written file path, and the lint and judge result files
 - Counts of updated, created, and disabled questions, and of keyword additions, renames, and moves
+- In source mode: term count, keyword count, question count, terms not made and the reasons (for example calculation-only), and non-term entries with how each was handled (asked about its content, or skipped)
+- Lint warnings and the response to each (rewritten, or kept with a reason)
+- Judging: judged count, guessable count with the breakdown by cue, rewrite-count distribution, unresolved questions (still guessable after 5 rewrites), and unjudged questions (errors or unreadable responses)
 - Every place where you departed from the principles (fewer choices, more than one piece of information, a comment you did not follow) and why
 - Anything you could not do because the import cannot express it (see `references/exchange-format.md`)
 - How to import: open 「入出力」 in the app, choose the file in the import panel, review the validation and the diff preview, then apply
