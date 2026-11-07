@@ -194,6 +194,23 @@
   - _Depends: 6.2, 6.4_
   - _Requirements: 4.3, 5.9, 7.2, 7.4, 7.5, 7.6, 7.9, 7.10_
 
+- [ ] 7. 変更対応: 判定後の「次へ」を画面右下に固定する（2026-11-07）
+
+- [ ] 7.1 判定後の「次へ」を画面右下に固定し、内容が隠れないようにする
+  - 先に `QuizPlayPage.test.tsx` に、判定前は「次へ」の包みに `fixed` の class がなく末尾のスペーサーもない、判定後は `fixed` の class とスペーサーが付く、「次へ」が DOM 上で `FlagForm` の後にあることを、失敗するテストとして追加する
+  - design の `NEXT_DOCK` に従い、判定後だけ「次へ」を右下に固定する（モバイルは下部導線と画面下端の余白の上、PC は右下）。判定中は末尾にスペーサーを置き、「終了」の位置と Tab の順序は変えない
+  - `QuizPlayPage.test.tsx` を含む単体テスト、typecheck、build が通る
+  - _Boundary: QuizPlayPage_
+  - _Requirements: 5.10, 5.11, 10.3_
+
+- [ ] 7.2 「次へ」の固定表示の E2E を追加する
+  - `e2e/quiz.spec.ts` に、390×844 と 1280×800 で、判定直後と最下部までスクロールした後の両方で「次へ」がビューポート内の右下にあり 44px 以上であることを追加する
+  - 390×844 で「次へ」の下端が下部導線の上端より上にあり、最下部までスクロールした後にフラグの自由入力欄の下端が「次へ」の上端より上にあることを確認する
+  - 既存の「次へ」を押す手順を含め、`e2e/quiz.spec.ts` が mobile と desktop の両方で通る
+  - _Boundary: e2e/quiz.spec.ts_
+  - _Depends: 7.1_
+  - _Requirements: 5.10, 5.11_
+
 ## Implementation Notes
 
 - 1.1: 3テーブルの FK は on delete restrict のため、解答・SRS・フラグを作る E2E は後片付けでそれらを先に消す必要がある（GUC `quiz.write_via_rpc` を立てる直接 SQL 接続、またはテスト専用の手段）。RPC は `set_config('quiz.write_via_rpc','on', true)`（トランザクション限定）を使い、入力検証なしにこの設定を立てる公開関数を作らない。
