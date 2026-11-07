@@ -214,7 +214,7 @@
 
 - [ ] 8. 拡張: 出典資料からの作成と推測できる問題の検出（Requirement 11〜14）
 
-- [ ] 8.1 スクリプトのテスト基盤と取込用 JSON の読み取りを作る
+- [x] 8.1 スクリプトのテスト基盤と取込用 JSON の読み取りを作る
   - `vite.config.ts` のユニットテストの対象に `scripts/**/*.test.ts` を加える
   - `scripts/authoring/importModel.ts` に、取込用 JSON から作成・修正の問題を取り出す最小の型と `extractQuestions` を作る（`src/` は import しない）
   - 完了: `importModel.test.ts` で、作成・修正の問題だけが取り出され、`tempKey` のない作成は `create#<n>` になり、対応外の `format`・`version` で `ok: false` になることが `npm test` で通る

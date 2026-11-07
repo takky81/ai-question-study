@@ -14,8 +14,8 @@ export default defineConfig(({ command }) => ({
     },
   },
   test: {
-    // ユニットテストはモジュール隣の src 配下だけを対象にする（e2e/ は Playwright が実行する）
-    include: ['src/**/*.test.{ts,tsx}'],
+    // ユニットテストは src 配下と scripts 配下を対象にする（e2e/ は Playwright が実行する）
+    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts'],
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
   },
