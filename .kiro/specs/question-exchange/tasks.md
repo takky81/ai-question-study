@@ -221,7 +221,7 @@
   - _Boundary: scripts/authoring/importModel.ts, vite.config.ts_
   - _Requirements: 12.1, 13.1_
 
-- [ ] 8.2 (P) 推測の機械的な点検を作る
+- [x] 8.2 (P) 推測の機械的な点検を作る
   - `scripts/authoring/guessLint.ts` に、文字種の連続と2文字以上の部分文字列による語の取り出しと、6種類の規則（stem_overlap、length_outlier、form_outlier、absolute_word、containment、full_name）を純粋関数で作る。しきい値と一般語の除外リストは定数にまとめる
   - `scripts/authoring/lint-import.ts` に CLI を作る（`<import>.lint.json` と件数の要約、警告ありでも終了コード 0、読めない・対応外は 1）
   - 完了: `guessLint.test.ts` で規則ごとに警告が出る例と出ない例が通り、`node scripts/authoring/lint-import.ts .claude/skills/question-authoring/references/example-import.json` が要約を出して終了コード 0 で終わる
