@@ -177,6 +177,9 @@ e2e/
   - `src/features/quiz/flagAutosave.ts`（新規）— 自動保存キュー
   - `src/features/quiz/QuizPlayPage.tsx` — 問題ごとに自動保存キューを持ち、「次へ」「終了」の前に `flush` する
   - `src/features/quiz/ChoiceList.test.tsx`、`FlagForm.test.tsx`、`QuizPlayPage.test.tsx`、`flagAutosave.test.ts`（新規）、`e2e/quiz.spec.ts` — テストの更新
+- 2026-11-07 の要件変更（5.10、5.11）で変更するファイル（DB・RPC・共通レイアウトの変更なし）:
+  - `src/features/quiz/QuizPlayPage.tsx` — 判定後の「次へ」を画面右下に固定し、判定中は末尾にスペーサーを置く（5.10、5.11）
+  - `src/features/quiz/QuizPlayPage.test.tsx`、`e2e/quiz.spec.ts` — テストの追加
 - `supabase/seed.sql` — E2E 用に、出題対象・無効・削除の問題と途中ノードへの紐づけを含む科目と、1,050 問・1,200 キーワードの大量データ用科目を追加する（ローカル専用）
 
 ## System Flows
@@ -278,6 +281,8 @@ sequenceDiagram
 | 5.7 | 判定前は非表示 | ChoiceList、AnswerFeedback | `phase = 'answering'` | — |
 | 5.8 | 判定後の再選択不可と次へ | ChoiceList、QuizPlayPage | `phase = 'judged'` | — |
 | 5.9 | 判定後の「？」位置の ○／× | ChoiceList | `choiceDisplayState`、`MarkCell` | — |
+| 5.10 | 判定後の「次へ」を画面右下に固定表示 | QuizPlayPage | `NEXT_DOCK` の class（`position: fixed`） | — |
+| 5.11 | 固定した「次へ」が内容と下部導線に重ならない | QuizPlayPage | 判定中の末尾スペーサー、モバイルの下部導線分のオフセット | — |
 | 6.1 | 解答中の成績 | QuestionStatsBar、question_stats | `QuestionStats` | — |
 | 6.2 | 判定後の即時反映 | stats.ts、session.ts、record_answer | `applyAnswerToStats`、返り値 | 出題と解答 |
 | 6.3 | 0件は「未出題」 | stats.ts | `formatCorrectRate` | — |
@@ -326,7 +331,7 @@ sequenceDiagram
 | range.ts | quiz | 範囲の URL 表現 | 1.7, 10.6 | — | Service |
 | api.ts | quiz | DB 呼び出しと変換 | 1.1–1.4, 3.1, 3.4, 7.2–7.6, 9.7, 10.5 | supabase (P0)、pagination (P0) | Service |
 | QuizStartPage / KeywordRangePicker | quiz UI | 範囲選択と開始 | 1.1–1.7, 1.9, 10.5 | api.ts (P0)、keywordTree.ts (P0) | — |
-| QuizPlayPage | quiz UI | 出題のオーケストレーション | 1.7, 2.4, 2.5, 3.3, 3.5, 5.8, 10.2, 10.5, 10.6 | session.ts (P0)、api.ts (P0) | State |
+| QuizPlayPage | quiz UI | 出題のオーケストレーション | 1.7, 2.4, 2.5, 3.3, 3.5, 5.8, 5.10, 5.11, 10.2, 10.5, 10.6 | session.ts (P0)、api.ts (P0) | State |
 | ChoiceList | quiz UI | 選択肢・「？」・わからない・正誤表示 | 4.1, 4.3, 4.6, 4.7, 5.1–5.5, 5.7–5.9, 10.3, 10.4 | 共通 class (P0) | — |
 | QuestionStatsBar | quiz UI | 成績表示 | 6.1–6.3 | stats.ts (P0) | — |
 | AnswerFeedback | quiz UI | 解説・階層パス | 5.5–5.7 | keywordTree.ts (P0) | — |
@@ -583,6 +588,13 @@ export function toQuizErrorMessage(context: string, error: { code?: string; mess
 - 選択時に `crypto.randomUUID()` で `clientAnswerId` を作り、`recordAnswer` を呼ぶ。失敗時は判定表示を保ったまま `role="alert"` で「解答を記録できませんでした」と「再試行」を表示する（3.3、3.4）。
 - 「終了」ボタンで `quiz?subject=…&keyword=…` へ戻る（10.6）。`finished` で `SessionSummary` を表示する（2.5）。
 - 1列のレイアウト（最大幅 `40rem`、中央寄せ）で、モバイルと PC で同じ操作にする。上から `QuestionStatsBar`、問題文、`ChoiceList`、判定後に `AnswerFeedback`、`FlagForm`、「次へ」（10.2）。
+- 判定後の「次へ」の固定表示（5.10、5.11、2026-11-07）:
+  - 位置: 「次へ」を包む `div` に、判定後（`phase = 'judged'`）だけ `position: fixed` の class を付ける。`sticky` は採らない（`section` の中でしか効かず、内容が短いと右下に来ない。`main` の `flex-1` に依存する）。
+  - オフセット: モバイル（`lg` 未満）は `right: 1rem`、`bottom: calc(4rem + env(safe-area-inset-bottom))`。下部導線（`AppLayout` の `fixed bottom-0 z-20 lg:hidden`、高さは `tap-target` の 44px と上ボーダー 4px と区切り線 1px で約 49px、その下に `pb-[env(safe-area-inset-bottom)]`）の上に 15px 前後の間隔を空ける。PC（`lg` 以上）は下部導線がないため `right: 1.5rem`、`bottom: 1.5rem`。Tailwind の任意値 class（例: `fixed right-4 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 lg:right-6 lg:bottom-6`）で書き、共通レイアウトは変更しない。下部導線を表示しない場合（学習区分の導線が0件）もモバイルのオフセットは同じとする（余白が増えるだけで重ならない）。
+  - 重なり: 判定中は `section` の末尾に `aria-hidden` の空の `div`（高さ `h-20`、80px）を置く。`main` の下余白（モバイル `pb-24`、PC `pb-4`）と合わせ、最下部までスクロールしたとき最後の内容（`FlagForm` と状態表示）が「次へ」の上端より上に来る（モバイル: 96px + 80px ≥ 64px + 44px + 余白、PC: 16px + 80px ≥ 24px + 44px + 余白）。判定前はスペーサーも固定もしない。
+  - 重なり順: `z-10`。ヘッダー（`sticky top-0 z-20`、モバイルのメニューを含む）と下部導線（`z-20`）より下にし、メニューを開いたときに覆わない。確認ダイアログは `<dialog>` のモーダル（top layer）なので影響しない。
+  - 見た目と操作: 既存の `BUTTON`（`tap-target` で 44×44px 以上、`focus-ring` の 2px アウトライン）と `bg-primary` の不透明な背景を維持し、固定の親に `overflow` を付けずフォーカスリングを切らない。ライト・ダークとも `--c-primary` と `--c-bg` の組み合わせのまま。
+  - フォーカス順: DOM の位置（`FlagForm` の後）は変えず、CSS の配置だけを変える。Tab 順は 10.3 のまま。「終了」ボタンの位置、「次へ」を判定後にだけ出す規則、`leaveAfterFlush` の動作は変えない。
 
 #### ChoiceList
 
@@ -725,7 +737,7 @@ erDiagram
 
 - `ChoiceList.test.tsx`: 末尾の「わからない」に「？」がない、判定前に解説・印がなく「？」がある、判定後に「？」ボタンがなくなり、正解の行に「正解」、選んだ不正解と選んだ「わからない」の行に「不正解」、それ以外の行に印がない（4.3、5.9）、正解時は選択＋正解、誤答時は選択＋誤答と正解の選択肢に正解表示、「わからない」選択時の表示、判定後のボタン `disabled`、「？」の `aria-label`、`--c-warn` 系の class を使わない（4.1、4.3、4.7、5.1〜5.5、5.7、5.8）
 - `FlagForm.test.tsx`: 未解消フラグの選択済み表示、`guessable` の初期チェック、チェックの変更で `onChangeFlags` が呼ばれる、入力中は `onCommitComment` が呼ばれず blur で呼ばれる、保存ボタンがなく Enter で送信しない、`saving`／`saved` の `role="status"` 表示、`failed` で入力保持と再試行（7.1〜7.7、7.9、7.10）
-- `QuizPlayPage.test.tsx`（追加分）: 保存中に「次へ」を押すと完了後に遷移する、保存失敗中は遷移しない（7.6）
+- `QuizPlayPage.test.tsx`（追加分）: 保存中に「次へ」を押すと完了後に遷移する、保存失敗中は遷移しない（7.6）。判定前は「次へ」の包みに `fixed` がなくスペーサーもない、判定後は `fixed` の class とスペーサーが付き、「次へ」が DOM 上で `FlagForm` の後にある（5.10、5.11、10.3）
 - `QuestionStatsBar.test.tsx`: 未出題の表示と判定後の更新（6.1〜6.3）
 
 ### E2E Tests（Playwright、ローカル Supabase、直列）
@@ -739,6 +751,7 @@ erDiagram
   - 「？」エリアの解答後に `guessable` が選択済み。保存ボタンがない、チェックだけで DB に未解消で記録され外すと消える、自由入力の blur で記録され同じ内容の再 blur では変わらない、空白にして blur でコメントが消える、textarea にフォーカスしたまま「次へ」を押してもコメントが記録される、再読み込み後の選択済み表示（7.1〜7.5、7.7、7.9、7.10）。既存の「フラグを保存」クリックの手順は、操作後に DB の値を `expect.poll` で待つ形へ置き換える
   - フラグ保存 RPC をネットワーク遮断で失敗させ、入力保持・再試行の表示、再試行で記録される（7.6）
   - 記録 RPC をネットワーク遮断で失敗させ、記録失敗の表示、「次へ」の無効、再試行で1件だけ記録される（3.3〜3.5）
+  - 判定後の「次へ」の固定表示（5.10、5.11）: 390×844 と 1280×800 で、判定直後とページ最下部までスクロールした後の両方で、スクロールせずに「次へ」の `boundingBox` がビューポート内の右下にある。390×844 で「次へ」の下端が下部導線（`学習ナビゲーション`）の上端より上にある。最下部までスクロールした後、最後の内容（フラグの自由入力欄）の下端が「次へ」の上端より上にある。「次へ」の高さ・幅が 44px 以上。既存の「次へ」をクリックする手順は、固定表示でも操作できることを確かめるためそのまま使う（`scrollIntoViewIfNeeded` は不要になる）
   - 終了ボタンで範囲選択に戻り、記録済みの解答が成績に残る（10.6）
   - モバイル（390×844）で横スクロールなし、「？」エリアと選択領域が 44px 以上で重ならない、PC（1280×800）で同じ操作、Tab で全操作に到達できフォーカスが見える、学習区分の導線と未ログイン時のリダイレクト、ダークテーマ（`colorScheme: 'dark'`）での表示（1.9、4.6、10.1〜10.4）
   - 候補の取得をネットワーク遮断で失敗させ、エラーと再試行（10.5）
