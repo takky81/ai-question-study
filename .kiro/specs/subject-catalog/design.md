@@ -622,3 +622,11 @@ erDiagram
 
 - 一覧は DB 側で絞り込み・件数・ページングを行い、1回の応答は50件。キーワード全件は `fetchAllPages` で取得する（1,000 件上限への対応）。
 - 部分一致は `pg_trgm` の GIN index、キーワード配下の絞り込みは `question_keywords(keyword_id)` と再帰 CTE の `keywords(parent_id)` index を使う。
+
+## 変更: 解説の任意化（2026-11-08、要件 4.1、4.2、5.3、5.11）
+
+- **DB**: 新しい migration `supabase/migrations/20261109000000_catalog_optional_explanation.sql` で `questions.explanation` と `choices.explanation` の check 制約（`questions_explanation_check`、`choices_explanation_check`）を外す。`not null` は残し、空は空の文字列で表す。適用済みの migration は編集しない
+- **検証**（`src/features/catalog/validate.ts`）: 問題全体の解説と選択肢の解説の `required` エラーを外す。誤答（`isCorrect: false`）の選択肢の解説が空（前後の空白だけを含む）の場合は、警告 `wrong_choice_unexplained`（対象 `choiceExplanation`、文言「選択肢 n は誤答です。解説を書いてください。」）を返す（5.11）。略語の警告（5.7）は変えない
+- **API の文言**（`src/features/catalog/api.ts`）: 外した2つの制約名の文言は使われなくなるため削除する
+- **編集画面**: 入力欄は変えない。空のまま保存できる
+- **Revalidation Triggers**: 出題（解説の表示）と入出力（取込の検証）がこの検証と空の解説に依存する。quiz-session と question-exchange の同日の変更で合わせる

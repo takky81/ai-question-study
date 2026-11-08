@@ -177,6 +177,22 @@
   - _Depends: 5.1_
   - _Requirements: 7.2, 7.3, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4_
 
+- [ ] 7. 変更: 解説の任意化（2026-11-08 の要件 4.1、4.2、5.3、5.11 の変更）
+
+- [ ] 7.1 解説の check 制約を外す migration を作る
+  - 新しい migration で `questions_explanation_check` と `choices_explanation_check` を外す（`not null` は残す）
+  - `api.ts` から外した制約の文言と、そのテストを削除する
+  - 完了: `supabase db reset` 後に、解説が空の文字列の問題と選択肢を保存 RPC で保存でき、`npm test` が通る
+  - _Boundary: supabase/migrations, src/features/catalog/api.ts_
+  - _Requirements: 4.1, 4.2_
+
+- [ ] 7.2 検証規則を解説の任意化に合わせる
+  - 問題全体の解説と選択肢の解説の `required` エラーを外し、誤答の解説が空なら警告 `wrong_choice_unexplained` を返す
+  - 完了: `validate.test.ts` で、正解の解説と問題全体の解説が空でも問題なし、誤答の解説が空なら警告、のテストが通る。解説の空を前提にした既存の E2E を更新して通る
+  - _Depends: 7.1_
+  - _Boundary: src/features/catalog/validate.ts, e2e/catalog*.spec.ts_
+  - _Requirements: 5.3, 5.11_
+
 ## Implementation Notes
 
 - 1.1: choices の RLS WITH CHECK は親の問題が自分のものであることも要求する（他人の question_id への挿入を防ぐ）。question_keywords の他人の行への紐づけは invoker 権限の `check_link_subject` が RLS 越しに防ぐため、この関数を security definer にしてはならない。「正解はちょうど1つ」は choices への書き込み時の遅延トリガーで検査するので、問題と選択肢は 1.2 の `save_question` で同一トランザクションに保存する

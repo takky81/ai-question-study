@@ -211,6 +211,15 @@
   - _Depends: 7.1_
   - _Requirements: 5.10, 5.11_
 
+- [ ] 8. 変更: 空の解説を表示しない（2026-11-08 の要件 5.5 の変更）
+
+- [ ] 8.1 解答画面で空の解説と空の枠を表示しない
+  - `AnswerFeedback` は解説が空白だけなら段落を出さず、解説も階層パスもなければ枠ごと出さない
+  - `ChoiceList` は選択肢の解説が空白だけなら区切りと段落を出さない
+  - 完了: コンポーネントテストで、空白だけの解説が表示されず、解説も階層パスもないとき「解説」の枠がないことが通る
+  - _Boundary: src/features/quiz/AnswerFeedback.tsx, src/features/quiz/ChoiceList.tsx_
+  - _Requirements: 5.5_
+
 ## Implementation Notes
 
 - 1.1: 3テーブルの FK は on delete restrict のため、解答・SRS・フラグを作る E2E は後片付けでそれらを先に消す必要がある（GUC `quiz.write_via_rpc` を立てる直接 SQL 接続、またはテスト専用の手段）。RPC は `set_config('quiz.write_via_rpc','on', true)`（トランザクション限定）を使い、入力検証なしにこの設定を立てる公開関数を作らない。

@@ -274,6 +274,21 @@
   - _Boundary: scripts/authoring/blindJudge.ts, .claude/skills/question-authoring/SKILL.md_
   - _Requirements: 11.7, 11.12, 13.4, 13.6_
 
+- [ ] 9. 変更: 解説の省略（2026-11-08 の要件 9.9、15 の変更）
+
+- [ ] 9.1 フォーマット文書と skill を解説の省略に合わせる
+  - `exchange-format.md` に空の解説の意味と作成の規則を書く。SKILL.md の内容規則と自己点検を合わせる
+  - 完了: `skillDoc.test.ts` と `formatDoc.test.ts` が通り、空の解説を含む取込用 JSON が `parseImportFile` で `ok: true` になるテストが通る
+  - _Depends: subject-catalog 7.2_
+  - _Boundary: .claude/skills/question-authoring/, src/features/exchange/*Doc.test.ts, src/features/exchange/parse.test.ts_
+  - _Requirements: 9.9, 15.1, 15.2, 15.3, 15.4, 15.5, 15.6_
+
+- [ ] 9.2 基礎理論の取込用 JSON を新しい規則で整理する
+  - 問題全体の解説と、問題文で足りる正解の解説を空にし、誤答の解説と略語のフルネームは残す
+  - 完了: アプリの検証と同じ規則でエラー0・警告0になり、所有者がアプリで取り込める
+  - _Depends: 9.1_
+  - _Requirements: 15.2, 15.4, 15.5_
+
 ## Implementation Notes
 
 - 1.1: export の p_filter のキーは flag / flagTypes / correctRateMin / correctRateMax / attemptMin / attemptMax / attempted / includeDisabled（2.1 の toExportFilter はこの名前で出す）。無効の問題は question_stats に行がないため集計値は 0・null（design どおり。4.2 の SKILL.md に一言添える）。

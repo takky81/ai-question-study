@@ -776,3 +776,9 @@ erDiagram
 
 - 候補と集計は DB 側で算出し、全件取得は `fetchAllPages`（1,000 件ずつ、一意キー順）で行う。
 - `answers(question_id, answered_at)` で問題ごとの集計、`question_flags(question_id, status)` でフラグの取得を支える。`keyword_stats` は `keyword_subtree_ids` と上流の `keywords(parent_id)`、`question_keywords(keyword_id)` の index を使う。性能問題が測定された場合は、閉包テーブルを別の migration で追加する（`research.md` 参照）。
+
+## 変更: 空の解説を表示しない（2026-11-08、要件 5.5）
+
+- `AnswerFeedback.tsx`: 問題全体の解説が空（前後の空白だけを含む）なら段落を出さない。解説もキーワードの階層パスもないときは、枠（`section`）ごと表示しない
+- `ChoiceList.tsx`: 選択肢の解説が空（前後の空白だけを含む）なら、選択肢の枠内の解説の区切りと段落を出さない（現在の `!== ''` を `trim()` で判定する）
+- データの取得・型は変えない（空の文字列のまま受け取る）
