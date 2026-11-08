@@ -212,7 +212,7 @@
   - _Depends: 7.1, 7.3_
   - _Requirements: 1.6_
 
-- [ ] 8. 拡張: 出典資料からの作成と推測できる問題の検出（Requirement 11〜14）
+- [x] 8. 拡張: 出典資料からの作成と推測できる問題の検出（Requirement 11〜14）
 
 - [x] 8.1 スクリプトのテスト基盤と取込用 JSON の読み取りを作る
   - `vite.config.ts` のユニットテストの対象に `scripts/**/*.test.ts` を加える
@@ -261,7 +261,7 @@
   - _Boundary: .kiro/steering/structure.md_
   - _Requirements: 14.1_
 
-- [ ] 8.7 最初の中分類で受け入れ確認をする
+- [x] 8.7 最初の中分類で受け入れ確認をする
   - シラバスのテキストを `exchange-data/応用情報技術者試験/syllabus.txt` に置き、所有者が作った科目の空の出力 JSON を使って、skill の出典モードで「中分類 1：基礎理論」の取込用 JSON を作る
   - 完了: 取込用 JSON がアプリの検証でエラー0になり、報告に用語数・問題数・点検の警告と対応・判定の内訳・作り直しの回数の分布・未判定の問題が出る。誤検出の割合と1問あたりのトークン数を Implementation Notes に記録し、しきい値の調整が必要かを判断する
   - _Depends: 8.5, 8.6_
@@ -274,7 +274,7 @@
   - _Boundary: scripts/authoring/blindJudge.ts, .claude/skills/question-authoring/SKILL.md_
   - _Requirements: 11.7, 11.12, 13.4, 13.6_
 
-- [ ] 9. 変更: 解説の省略（2026-11-08 の要件 9.9、15 の変更）
+- [x] 9. 変更: 解説の省略（2026-11-08 の要件 9.9、15 の変更）
 
 - [x] 9.1 フォーマット文書と skill を解説の省略に合わせる
   - `exchange-format.md` に空の解説の意味と作成の規則を書く。SKILL.md の内容規則と自己点検を合わせる
@@ -283,7 +283,7 @@
   - _Boundary: .claude/skills/question-authoring/, src/features/exchange/*Doc.test.ts, src/features/exchange/parse.test.ts_
   - _Requirements: 9.9, 15.1, 15.2, 15.3, 15.4, 15.5, 15.6_
 
-- [ ] 9.2 基礎理論の取込用 JSON を新しい規則で整理する
+- [x] 9.2 基礎理論の取込用 JSON を新しい規則で整理する
   - 問題全体の解説と、問題文で足りる正解の解説を空にし、誤答の解説と略語のフルネームは残す
   - 完了: アプリの検証と同じ規則でエラー0・警告0になり、所有者がアプリで取り込める
   - _Depends: 9.1_
