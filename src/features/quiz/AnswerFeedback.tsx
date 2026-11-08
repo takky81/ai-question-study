@@ -13,10 +13,12 @@ export function AnswerFeedback({ judged, explanation, keywordIds, keywords }: Pr
   const paths = keywordIds
     .map((id) => ({ id, path: keywordPath(keywords, id) }))
     .filter((p) => p.path.length > 0);
+  const hasExplanation = explanation.trim() !== '';
+  if (!hasExplanation && paths.length === 0) return null;
 
   return (
     <section className="flex min-w-0 flex-col gap-3 rounded border border-border bg-surface p-3" aria-label="解説">
-      {explanation !== '' && <p className="min-w-0 whitespace-pre-wrap break-words text-text">{explanation}</p>}
+      {hasExplanation && <p className="min-w-0 whitespace-pre-wrap break-words text-text">{explanation}</p>}
       {paths.length > 0 && (
         <ul className="flex min-w-0 flex-col gap-1 text-sm text-text-muted">
           {paths.map((p) => (

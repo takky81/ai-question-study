@@ -29,4 +29,16 @@ describe('AnswerFeedback', () => {
     render(<AnswerFeedback judged explanation="" keywordIds={['missing']} keywords={keywords} />);
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
   });
+
+  it('空白だけの解説は段落を出さず、キーワードがあれば枠に階層パスだけを出す', () => {
+    const { container } = render(<AnswerFeedback judged explanation={'  \n '} keywordIds={['c']} keywords={keywords} />);
+    expect(container.querySelector('p')).toBeNull();
+    expect(screen.getByRole('region', { name: '解説' })).toBeInTheDocument();
+    expect(screen.getByText('ネットワーク / TCP')).toBeInTheDocument();
+  });
+
+  it('解説が空でキーワードの階層パスもないときは解説の枠を描画しない', () => {
+    const { container } = render(<AnswerFeedback judged explanation=" " keywordIds={['missing']} keywords={keywords} />);
+    expect(container).toBeEmptyDOMElement();
+  });
 });

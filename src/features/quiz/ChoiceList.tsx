@@ -95,7 +95,7 @@ export function ChoiceList({ choices, selection, correctChoiceId, disabled = fal
                 </button>
               )}
             </div>
-            {judged && c.explanation !== '' && (
+            {judged && c.explanation.trim() !== '' && (
               <p className="min-w-0 break-words border-t border-border p-3 text-sm text-text">{c.explanation}</p>
             )}
           </li>

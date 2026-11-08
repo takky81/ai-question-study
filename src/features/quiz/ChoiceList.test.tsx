@@ -136,4 +136,15 @@ describe('ChoiceList', () => {
     render(<ChoiceList choices={choices} selection={null} correctChoiceId={null} disabled onAnswer={vi.fn()} />);
     for (const b of screen.getAllByRole('button')) expect(b).toBeDisabled();
   });
+
+  it('判定後: 空または空白だけの選択肢解説は区切り線も段落も出さない', () => {
+    const empties: QuizChoice[] = [
+      { id: 'a', body: '選択肢A', explanation: '', isCorrect: true },
+      { id: 'b', body: '選択肢B', explanation: ' \n ', isCorrect: false },
+    ];
+    const { container } = render(
+      <ChoiceList choices={empties} selection={{ choiceId: 'b' }} correctChoiceId="a" onAnswer={vi.fn()} />,
+    );
+    expect(container.querySelector('p')).toBeNull();
+  });
 });
