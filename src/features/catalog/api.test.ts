@@ -260,10 +260,10 @@ describe('問題のエラー変換', () => {
         message: `new row for relation "x" violates check constraint "${c}"`,
       });
     expect(v('questions_stem_check')).toBe('問題文を入力してください');
-    expect(v('questions_explanation_check')).toBe('問題の解説を入力してください');
+    expect(v('questions_explanation_check')).toBe('名前を入力してください');
     expect(v('questions_kind_check')).toBe('問題の種別が正しくありません');
     expect(v('choices_body_check')).toBe('選択肢の本文を入力してください');
-    expect(v('choices_explanation_check')).toBe('選択肢の解説を入力してください');
+    expect(v('choices_explanation_check')).toBe('名前を入力してください');
     expect(v('subjects_name_check')).toBe('名前を入力してください');
   });
 

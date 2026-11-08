@@ -179,7 +179,7 @@
 
 - [ ] 7. 変更: 解説の任意化（2026-11-08 の要件 4.1、4.2、5.3、5.11 の変更）
 
-- [ ] 7.1 解説の check 制約を外す migration を作る
+- [x] 7.1 解説の check 制約を外す migration を作る
   - 新しい migration で `questions_explanation_check` と `choices_explanation_check` を外す（`not null` は残す）
   - `api.ts` から外した制約の文言と、そのテストを削除する
   - 完了: `supabase db reset` 後に、解説が空の文字列の問題と選択肢を保存 RPC で保存でき、`npm test` が通る
@@ -208,3 +208,4 @@
 - 6.2: e2e/catalog.spec.ts はファイル単位の beforeEach で desktop 以外をスキップし、db 準備も desktop のみ。6.4 でモバイル幅の describe を足すときは、スキップを各 describe へ移すこと。
 - 6.4: e2e/catalog.spec.ts は describe ごとに desktopOnly() でスキップし、データ名は ${RUN}-${project} の PREFIX で分けて後片付けする。
 - 6.4 後の修正: 「問題一覧へ戻る」は一覧からの router state.listSearch（? で始まるものだけ）で絞り込みを保つ。QuestionList は latestParams ref に差分を重ねて連続変更の上書きを防ぐ（CatalogPage の onSelect は描画時の params のまま。実害は低い）。
+- 7.1: 既存ファイルに prettier をかけると、折り返しの違う箇所（100 桁前後）まで書き換わる。変更した行だけを整形し、ファイル全体には prettier をかけない。ローカル DB への migration の反映は `npx supabase migration up --local` で行う（db reset はしない）。

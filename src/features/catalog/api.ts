@@ -56,10 +56,8 @@ const P0001_MESSAGES: Record<string, string> = {
 // check 違反（23514）の制約名ごとの文言。該当しないもの（科目・キーワードの名前）は名前の文言にする
 const CHECK_MESSAGES: Record<string, string> = {
   questions_stem_check: '問題文を入力してください',
-  questions_explanation_check: '問題の解説を入力してください',
   questions_kind_check: '問題の種別が正しくありません',
   choices_body_check: '選択肢の本文を入力してください',
-  choices_explanation_check: '選択肢の解説を入力してください',
 };
 
 function checkMessage(error: DbError): string {
