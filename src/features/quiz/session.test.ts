@@ -45,20 +45,20 @@ function run(actions: SessionAction[], start: SessionState = createInitialSessio
 
 const twoCandidates = [cand('q2', '2026-01-02T00:00:00Z'), cand('q1', '2026-01-01T00:00:00Z')];
 const loadedQ1: SessionAction[] = [
-  { type: 'candidatesLoaded', candidates: twoCandidates },
+  { type: 'candidatesLoaded', candidates: twoCandidates, tieBreak: new Map() },
   { type: 'questionLoaded', question: question('q1') },
 ];
 
 describe('sessionReducer', () => {
   it('初期状態は読込中で、候補読込で次の問題 ID が出題順で決まる', () => {
     expect(createInitialSession().phase).toBe('loading');
-    const s = run([{ type: 'candidatesLoaded', candidates: twoCandidates }]);
+    const s = run([{ type: 'candidatesLoaded', candidates: twoCandidates, tieBreak: new Map() }]);
     expect(s.phase).toBe('loading');
     expect(nextQuestionId(s)).toBe('q1');
   });
 
   it('候補が0件なら終了にする', () => {
-    const s = run([{ type: 'candidatesLoaded', candidates: [] }]);
+    const s = run([{ type: 'candidatesLoaded', candidates: [], tieBreak: new Map() }]);
     expect(s.phase).toBe('finished');
     expect(nextQuestionId(s)).toBeNull();
   });
@@ -152,7 +152,7 @@ describe('sessionReducer', () => {
   });
 
   it('出題対象外のスキップは解答済みに加えて集計を変えずに進む', () => {
-    const loading = run([{ type: 'candidatesLoaded', candidates: twoCandidates }]);
+    const loading = run([{ type: 'candidatesLoaded', candidates: twoCandidates, tieBreak: new Map() }]);
     const skipped = sessionReducer(loading, { type: 'skipUnservable' });
     expect(skipped.answeredIds.has('q1')).toBe(true);
     expect(skipped.summary).toEqual({ answered: 0, correct: 0 });
@@ -164,7 +164,22 @@ describe('sessionReducer', () => {
   it('読込失敗でエラーになり、候補の再読込で復帰できる', () => {
     const err = sessionReducer(createInitialSession(), { type: 'loadFailed' });
     expect(err.phase).toBe('error');
-    expect(sessionReducer(err, { type: 'candidatesLoaded', candidates: twoCandidates }).phase).toBe('loading');
+    expect(sessionReducer(err, { type: 'candidatesLoaded', candidates: twoCandidates, tieBreak: new Map() }).phase).toBe('loading');
+  });
+
+  it('同率の候補は渡された乱数の順に出題し、同じセッションでは順序を保つ（2.3）', () => {
+    const t = '2026-01-01T00:00:00Z';
+    const tied = [cand('a', t), cand('b', t), cand('c', t)];
+    const tieBreak = new Map([['a', 0.9], ['b', 0.1], ['c', 0.5]]);
+    const s = run([{ type: 'candidatesLoaded', candidates: tied, tieBreak }]);
+    expect(nextQuestionId(s)).toBe('b');
+    const skipped = run([{ type: 'skipUnservable' }], s);
+    expect(nextQuestionId(skipped)).toBe('c');
+    // 同じ候補と乱数での再読込（読込の再試行）でも順序は変わらない
+    const reloaded = sessionReducer(skipped, { type: 'candidatesLoaded', candidates: tied, tieBreak: skipped.tieBreak });
+    expect(nextQuestionId(reloaded)).toBe('c');
+    const other = run([{ type: 'candidatesLoaded', candidates: tied, tieBreak: new Map([['a', 0.1], ['b', 0.9], ['c', 0.5]]) }]);
+    expect(nextQuestionId(other)).toBe('a');
   });
 
   it('入力の状態を変更しない', () => {

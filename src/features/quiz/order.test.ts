@@ -67,6 +67,43 @@ describe('compareCandidates', () => {
   });
 });
 
+describe('compareCandidates の同率（2.3）', () => {
+  const t = '2026-02-01T00:00:00Z';
+  const tb = new Map([['a', 0.7], ['b', 0.2], ['c', 0.5]]);
+  const sortedBy = (list: QuizCandidate[], tieBreak: ReadonlyMap<string, number>) =>
+    [...list].sort((x, y) => compareCandidates(x, y, tieBreak)).map((x) => x.questionId);
+
+  it('未出題の同時刻は乱数の昇順', () => {
+    expect(sortedBy([c('a'), c('b'), c('c')], tb)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('出題済みの同率・同時刻は乱数の昇順', () => {
+    expect(sortedBy([answered('a', 0.5, t), answered('b', 0.5, t), answered('c', 0.5, t)], tb)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('未出題優先・作成日時・定着率・最後の解答日時は乱数より優先する', () => {
+    const list = [
+      answered('a', 0.1, t),
+      answered('b', 0.9, t),
+      c('c', { createdAt: '2026-01-02T00:00:00Z' }),
+      c('d'),
+      answered('e', 0.1, '2026-01-15T00:00:00Z'),
+    ];
+    const rev = new Map([['a', 0.1], ['b', 0.2], ['c', 0.3], ['d', 0.4], ['e', 0.5]]);
+    expect(sortedBy(list, rev)).toEqual(['d', 'c', 'e', 'a', 'b']);
+  });
+
+  it('乱数が等しいときは ID の昇順（全順序）', () => {
+    const same = new Map([['x', 0.3], ['y', 0.3]]);
+    expect(sortedBy([c('y'), c('x')], same)).toEqual(['x', 'y']);
+  });
+
+  it('pickNextCandidate は乱数を使って同率から選ぶ', () => {
+    expect(pickNextCandidate([c('a'), c('b'), c('c')], new Set(), tb)?.questionId).toBe('b');
+    expect(pickNextCandidate([c('a'), c('b'), c('c')], new Set(['b']), tb)?.questionId).toBe('c');
+  });
+});
+
 describe('pickNextCandidate', () => {
   const list = [answered('a', 0.2, '2026-02-01T00:00:00Z'), c('u2', { createdAt: '2026-01-02T00:00:00Z' }), c('u1')];
 

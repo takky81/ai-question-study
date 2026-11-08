@@ -1,5 +1,5 @@
 // 出題セッションの状態遷移（純粋関数、I/O なし）。冪等キー（clientAnswerId）は呼び出し側が作って渡す。
-import { pickNextCandidate } from './order';
+import { pickNextCandidate, type TieBreak } from './order';
 import { applyAnswerToStats } from './stats';
 import type { AnswerKind, AnswerResult, QuestionStats, QuizCandidate, QuizQuestion } from './types';
 
@@ -8,6 +8,7 @@ export type RecordStatus = 'idle' | 'saving' | 'saved' | 'failed';
 
 export type SessionState = {
   candidates: QuizCandidate[];
+  tieBreak: TieBreak; // 同率の順序を決める候補ごとの乱数（セッション中は変えない）
   answeredIds: ReadonlySet<string>;
   current: QuizQuestion | null;
   phase: SessionPhase;
@@ -19,7 +20,7 @@ export type SessionState = {
 };
 
 export type SessionAction =
-  | { type: 'candidatesLoaded'; candidates: QuizCandidate[] }
+  | { type: 'candidatesLoaded'; candidates: QuizCandidate[]; tieBreak: TieBreak }
   | { type: 'questionLoaded'; question: QuizQuestion }
   | { type: 'answered'; kind: AnswerKind; choiceId: string | null; clientAnswerId: string }
   | { type: 'recordSucceeded'; result: AnswerResult }
@@ -32,6 +33,7 @@ export type SessionAction =
 export function createInitialSession(): SessionState {
   return {
     candidates: [],
+    tieBreak: new Map(),
     answeredIds: new Set(),
     current: null,
     phase: 'loading',
@@ -45,12 +47,12 @@ export function createInitialSession(): SessionState {
 
 // 読込中に呼び出し側が取得すべき問題の ID。なければ null
 export function nextQuestionId(state: SessionState): string | null {
-  return pickNextCandidate(state.candidates, state.answeredIds)?.questionId ?? null;
+  return pickNextCandidate(state.candidates, state.answeredIds, state.tieBreak)?.questionId ?? null;
 }
 
 // 次の問題へ進む。候補が残っていなければ終了にする
 function advance(state: SessionState, answeredIds: ReadonlySet<string>): SessionState {
-  const hasNext = pickNextCandidate(state.candidates, answeredIds) !== null;
+  const hasNext = pickNextCandidate(state.candidates, answeredIds, state.tieBreak) !== null;
   return {
     ...state,
     answeredIds,
@@ -76,7 +78,7 @@ function toStats(r: AnswerResult): QuestionStats {
 export function sessionReducer(state: SessionState, action: SessionAction): SessionState {
   switch (action.type) {
     case 'candidatesLoaded':
-      return advance({ ...state, candidates: action.candidates }, state.answeredIds);
+      return advance({ ...state, candidates: action.candidates, tieBreak: action.tieBreak }, state.answeredIds);
 
     case 'questionLoaded':
       if (state.phase !== 'loading') return state;

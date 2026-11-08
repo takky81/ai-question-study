@@ -220,9 +220,9 @@
   - _Boundary: src/features/quiz/AnswerFeedback.tsx, src/features/quiz/ChoiceList.tsx_
   - _Requirements: 5.5_
 
-- [ ] 9. 変更: 同率の問題の順序をセッションごとにランダムにする（2026-11-08 の要件 2.3 の変更）
+- [x] 9. 変更: 同率の問題の順序をセッションごとにランダムにする（2026-11-08 の要件 2.3 の変更）
 
-- [ ] 9.1 同率の問題の順序をセッションごとの乱数で決める
+- [x] 9.1 同率の問題の順序をセッションごとの乱数で決める
   - `compareCandidates` の最後の比較を、セッションごとの乱数の順にする。乱数は候補の読み込み時に1回だけ作り、セッションの状態に持つ
   - 完了: `order.test.ts` と `session.test.ts` で、同率の問題が差し替えた乱数どおりに並び、同じセッション内では順序が変わらず、未出題の優先と定着率の順は従来どおりであることが通る
   - _Boundary: src/features/quiz/order.ts, src/features/quiz/session.ts, src/features/quiz/QuizPlayPage.tsx_

@@ -77,7 +77,9 @@ export function QuizPlayPage(): ReactElement | null {
       (candidates) => {
         if (!active) return;
         setCandidatesLoaded(true);
-        dispatch({ type: 'candidatesLoaded', candidates });
+        // 同率の順序はセッションごとの乱数で決める（2.3）。reducer を純粋に保つためここで作る
+        const tieBreak = new Map(candidates.map((c) => [c.questionId, Math.random()]));
+        dispatch({ type: 'candidatesLoaded', candidates, tieBreak });
       },
       (e: unknown) => {
         if (!active) return;
@@ -205,7 +207,7 @@ export function QuizPlayPage(): ReactElement | null {
   // 読み込み失敗からの再試行。候補が未取得なら候補から、取得済みなら同じ候補で読込中へ戻して問題を取り直す
   function retryLoad() {
     setLoadError(null);
-    if (candidatesLoaded) dispatch({ type: 'candidatesLoaded', candidates: state.candidates });
+    if (candidatesLoaded) dispatch({ type: 'candidatesLoaded', candidates: state.candidates, tieBreak: state.tieBreak });
     else setLoadTry((n) => n + 1);
   }
 
