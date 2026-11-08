@@ -44,20 +44,42 @@ describe('validateQuestion', () => {
     }
   });
 
-  it('空白のみの各欄をエラーで、欄と選択肢の位置付きで返す（required）', () => {
+  it('空白のみの問題文・選択肢本文をエラーで、欄と選択肢の位置付きで返す（required）', () => {
     const input = makeInput();
     input.stem = '  ';
-    input.explanation = '';
     input.choices[1]!.body = '\n';
-    input.choices[2]!.explanation = ' ';
     const issues = find(input, 'required');
-    expect(issues.map((i) => i.target)).toEqual([
-      { field: 'stem' },
-      { field: 'explanation' },
-      { field: 'choiceBody', index: 1 },
-      { field: 'choiceExplanation', index: 2 },
-    ]);
+    expect(issues.map((i) => i.target)).toEqual([{ field: 'stem' }, { field: 'choiceBody', index: 1 }]);
     expect(issues.every((i) => i.severity === 'error' && i.message.length > 0)).toBe(true);
+  });
+
+  it('問題全体の解説と正解の選択肢の解説は空でも何も返さない', () => {
+    const input = makeInput();
+    input.explanation = '';
+    input.choices[0]!.explanation = ' ';
+    expect(validateQuestion(input, ctx)).toEqual([]);
+  });
+
+  it('誤答の選択肢の解説が空（空白のみ）なら警告（wrong_choice_unexplained）', () => {
+    const input = makeInput();
+    input.choices[1]!.explanation = '';
+    input.choices[3]!.explanation = ' \n';
+    const issues = find(input, 'wrong_choice_unexplained');
+    expect(issues).toEqual([
+      {
+        code: 'wrong_choice_unexplained',
+        severity: 'warning',
+        target: { field: 'choiceExplanation', index: 1 },
+        message: '選択肢 2 は誤答です。解説を書いてください。',
+      },
+      {
+        code: 'wrong_choice_unexplained',
+        severity: 'warning',
+        target: { field: 'choiceExplanation', index: 3 },
+        message: '選択肢 4 は誤答です。解説を書いてください。',
+      },
+    ]);
+    expect(codes(input)).not.toContain('required');
   });
 
   it('選択肢が2個未満ならエラー（too_few_choices）、2個なら発生しない', () => {
@@ -161,6 +183,7 @@ describe('validateQuestion', () => {
     input.choices[4]!.id = 'c';
     input.keywordIds = [];
     input.choices[5]!.body = 'API';
+    input.choices[6]!.explanation = '';
     expect(codes(input)).toEqual([
       'correct_count',
       'required',
@@ -169,6 +192,7 @@ describe('validateQuestion', () => {
       'no_keyword',
       'choice_count_above',
       'abbreviation_unexplained',
+      'wrong_choice_unexplained',
     ]);
   });
 

@@ -295,7 +295,6 @@ describe('validateImport', () => {
         'error:correct_count@questions.update[0].choices',
         'error:required@questions.update[0].stem',
         'warning:choice_count_below@questions.update[0].choices',
-        'error:required@questions.create[0].choices[0].explanation',
         'error:duplicate_choice@questions.create[0].choices[1].body',
         'warning:choice_count_below@questions.create[0].choices',
         'warning:abbreviation_unexplained@questions.create[0].stem',

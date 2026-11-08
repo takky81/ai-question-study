@@ -14,7 +14,8 @@ export type ValidationCode =
   | 'foreign_keyword'
   | 'choice_count_below'
   | 'choice_count_above'
-  | 'abbreviation_unexplained';
+  | 'abbreviation_unexplained'
+  | 'wrong_choice_unexplained';
 
 export type ValidationTarget =
   | { field: 'stem' | 'explanation' | 'keywords' | 'choices' }
@@ -58,15 +59,11 @@ export function validateQuestion(
     error('correct_count', { field: 'choices' }, `正解の選択肢はちょうど1つにしてください（現在 ${correct} 個）。`);
   }
 
-  // 5.3 空欄
+  // 5.3 空欄（解説は任意。誤答の解説の空欄は 5.11 の警告）
   if (isBlank(input.stem)) error('required', { field: 'stem' }, '問題文を入力してください。');
-  if (isBlank(input.explanation)) error('required', { field: 'explanation' }, '問題の解説を入力してください。');
   choices.forEach((c, index) => {
     if (isBlank(c.body)) {
       error('required', { field: 'choiceBody', index }, `選択肢 ${index + 1} の本文を入力してください。`);
-    }
-    if (isBlank(c.explanation)) {
-      error('required', { field: 'choiceExplanation', index }, `選択肢 ${index + 1} の解説を入力してください。`);
     }
   });
 
@@ -142,6 +139,17 @@ export function validateQuestion(
   choices.forEach((c, index) =>
     checkAbbreviations(c.body, { field: 'choiceBody', index }, `選択肢 ${index + 1}`),
   );
+
+  // 5.11 誤答の解説の空欄
+  choices.forEach((c, index) => {
+    if (!c.isCorrect && isBlank(c.explanation)) {
+      warning(
+        'wrong_choice_unexplained',
+        { field: 'choiceExplanation', index },
+        `選択肢 ${index + 1} は誤答です。解説を書いてください。`,
+      );
+    }
+  });
 
   return issues;
 }
