@@ -129,7 +129,7 @@ Run this in both modes, after the lint.
 1. Run `node scripts/authoring/judge-import.ts <import.json>`. It writes per-question results to `<import>.judge.json` and prints the judged count, guessable count, cue breakdown, and the counts of `error` and `unparsed`. Exit code 2 means at least one `error` or `unparsed` result remains
 2. For each question judged guessable, replace the wrong choices, in this order of preference:
    - Real terms that are easy to confuse with the correct answer and that also fit the stem by their everyday meaning
-   - If those cannot be found, non-existent terms built from the same word parts as the correct answer. State in that choice's explanation that the term does not exist
+   - If those cannot be found, non-existent terms built from the same word parts as the correct answer. State in that choice's explanation that the term does not exist, briefly, quoting the choice text, for example 「「LSMT」は実在しない語である。」. Quoting it also keeps the app's abbreviation warning away, since the app only checks that each abbreviation appears somewhere in an explanation. Keep it to that one sentence
    - If replacing wrong choices cannot remove the cue (for example, the term's name literally spells out the stem), change how the question asks instead: ask about a feature of the term, or make another word the correct answer
 3. After rewriting, update the import JSON, re-run Step 8, then re-judge only the rewritten questions with `node scripts/authoring/judge-import.ts <import.json> --only <refs>` (comma-separated refs from the judge output). This merges the new results into the existing `<import>.judge.json`
 4. Allow at most 5 rewrites per question. After the fifth, stop rewriting that question and list it as unresolved in the report
