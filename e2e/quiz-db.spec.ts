@@ -311,13 +311,18 @@ test.describe('解答の記録と集計', () => {
     ]);
   });
 
-  test('「？」エリアの解答は SRS を変えず guessable を1件だけ付ける（4.4、4.5）', async () => {
+  test('「？」エリアの解答は SRS を変えず、正解のときだけ guessable を1件付ける（4.4、4.5）', async () => {
+    const guessFlags = async () =>
+      (await owner.from('question_flags').select('flag, status').eq('question_id', qGuess.id)).data;
+    // 不正解では guessable を付けない
+    const w = await recordOk(qGuess.id, qGuess.wrong, 'guess');
+    expect(w).toMatchObject({ is_correct: false, attempt_count: 1, correct_count: 0, retention: null });
+    expect(await guessFlags()).toEqual([]);
+    // 正解で1件付く（後続の集計の期待値に合わせ、qGuess の解答は2回にとどめる）
     const r = await recordOk(qGuess.id, qGuess.correct, 'guess');
-    expect(r).toMatchObject({ is_correct: true, attempt_count: 1, correct_count: 1, retention: null });
-    await recordOk(qGuess.id, qGuess.wrong, 'guess');
+    expect(r).toMatchObject({ is_correct: true, attempt_count: 2, correct_count: 1, retention: null });
     expect(await srsOf(qGuess.id)).toBeNull();
-    const { data: flags } = await owner.from('question_flags').select('flag, status').eq('question_id', qGuess.id);
-    expect(flags).toEqual([{ flag: 'guessable', status: 'open' }]);
+    expect(await guessFlags()).toEqual([{ flag: 'guessable', status: 'open' }]);
 
     // SRS 状態のある問題でも「？」は SRS を変えない
     await recordOk(qMid.id, qMid.correct, 'normal');

@@ -228,6 +228,14 @@
   - _Boundary: src/features/quiz/order.ts, src/features/quiz/session.ts, src/features/quiz/QuizPlayPage.tsx_
   - _Requirements: 2.3_
 
+- [x] 10. 変更: 「？」エリアの guessable は正解のときだけ付ける（2026-11-08 の要件 4.4、7.7 の変更）
+
+- [x] 10.1 解答の記録で「？」エリアの guessable を正解のときだけ付ける
+  - `record_answer` を新しい migration で置き換え、`guess` かつ正解のときだけ `guessable` を付ける
+  - 完了: `e2e/quiz-db.spec.ts` で、「？」の正解で `guessable` が1件付き、「？」の不正解では付かず、どちらも SRS を変えないことが通る
+  - _Boundary: supabase/migrations, e2e/quiz-db.spec.ts_
+  - _Requirements: 4.4, 4.5, 7.7_
+
 ## Implementation Notes
 
 - 1.1: 3テーブルの FK は on delete restrict のため、解答・SRS・フラグを作る E2E は後片付けでそれらを先に消す必要がある（GUC `quiz.write_via_rpc` を立てる直接 SQL 接続、またはテスト専用の手段）。RPC は `set_config('quiz.write_via_rpc','on', true)`（トランザクション限定）を使い、入力検証なしにこの設定を立てる公開関数を作らない。

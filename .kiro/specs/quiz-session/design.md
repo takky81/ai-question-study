@@ -788,3 +788,9 @@ erDiagram
 - `order.ts`: `compareCandidates(a, b, tieBreak)` の最後の比較を、問題 ID の順から `tieBreak`（問題 ID → 乱数）の昇順に変える。乱数が等しいとき（実質起こらない）だけ問題 ID で決め、比較を全順序に保つ。未出題は作成日時、出題済みは定着率と最後に解答した日時の比較は変えない
 - `session.ts`: `candidatesLoaded` のときに候補ごとの乱数を1回だけ作り、セッションの状態に持つ。乱数の生成は action の外（`QuizPlayPage` の dispatch 時）で行い、reducer を純粋に保つ。再試行で候補を読み直したときは新しい乱数にしてよい（新しいセッションの扱い）
 - テストは乱数を差し替えて、同率の順序が乱数どおりになること、同じセッションでは順序が変わらないことを確かめる
+
+## 変更: 「？」エリアの guessable は正解のときだけ付ける（2026-11-08、要件 4.4、7.7）
+
+- 新しい migration `supabase/migrations/20261109000100_quiz_guess_flag_on_correct.sql` で `public.record_answer` を `create or replace` し、`guess` の分岐で `guessable` を付ける処理を `v_is_correct` が真の場合に限る。SRS を変えない点（4.5）と、成績に数える点は変えない。権限（revoke／grant）は同じ内容で付け直す
+- 判定後のチェックボックスは `listOpenFlags` の結果をそのまま初期値にするため、フロントエンドは変えない（7.7 は DB の付与条件で満たす）
+- E2E: `e2e/quiz-db.spec.ts` の「？」エリアのテストを、正解で1件付く・不正解では付かない・SRS を変えない、に分けて確かめる
