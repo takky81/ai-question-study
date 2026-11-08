@@ -220,6 +220,14 @@
   - _Boundary: src/features/quiz/AnswerFeedback.tsx, src/features/quiz/ChoiceList.tsx_
   - _Requirements: 5.5_
 
+- [ ] 9. 変更: 同率の問題の順序をセッションごとにランダムにする（2026-11-08 の要件 2.3 の変更）
+
+- [ ] 9.1 同率の問題の順序をセッションごとの乱数で決める
+  - `compareCandidates` の最後の比較を、セッションごとの乱数の順にする。乱数は候補の読み込み時に1回だけ作り、セッションの状態に持つ
+  - 完了: `order.test.ts` と `session.test.ts` で、同率の問題が差し替えた乱数どおりに並び、同じセッション内では順序が変わらず、未出題の優先と定着率の順は従来どおりであることが通る
+  - _Boundary: src/features/quiz/order.ts, src/features/quiz/session.ts, src/features/quiz/QuizPlayPage.tsx_
+  - _Requirements: 2.3_
+
 ## Implementation Notes
 
 - 1.1: 3テーブルの FK は on delete restrict のため、解答・SRS・フラグを作る E2E は後片付けでそれらを先に消す必要がある（GUC `quiz.write_via_rpc` を立てる直接 SQL 接続、またはテスト専用の手段）。RPC は `set_config('quiz.write_via_rpc','on', true)`（トランザクション限定）を使い、入力検証なしにこの設定を立てる公開関数を作らない。
