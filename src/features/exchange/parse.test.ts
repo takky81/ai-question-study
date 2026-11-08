@@ -97,6 +97,12 @@ describe('parseImportFile', () => {
     expect(imp(validImport)).toEqual({ ok: true, value: validImport });
   });
 
+  it('問題と選択肢の解説が空文字でも正しいファイルとして返す（15.1）', () => {
+    const q = validImport.questions.create[0];
+    const file = { ...validImport, questions: { ...validImport.questions, create: [{ ...q, explanation: '' }] } };
+    expect(imp(file)).toEqual({ ok: true, value: file });
+  });
+
   it('壊れた JSON は invalid_json だけを返す', () => {
     const r = parseImportFile('{ not json');
     expect(issuesOf(r)).toEqual([expect.objectContaining({ code: 'invalid_json', path: '' })]);

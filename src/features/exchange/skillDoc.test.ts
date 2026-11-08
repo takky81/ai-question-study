@@ -62,6 +62,14 @@ describe('question-authoring SKILL.md', () => {
     },
   );
 
+  it('解説は必要なときだけ書き、誤答の選択肢には必ず書く（15.1〜15.6）', () => {
+    expect(skill).not.toContain('The question and every choice have an explanation');
+    expect(skill).not.toContain('The question and every choice have a non-empty explanation');
+    expect(skill).toMatch(/Always explain every wrong choice/);
+    expect(skill).toMatch(/in that choice's own explanation/);
+    expect(skill).toContain('「「LSMT」は実在しない語である。」');
+  });
+
   it('書き出し先と出力日時の記録を定める', () => {
     expect(skill).toContain('.import.json');
     expect(skill).toContain('basedOnExportedAt');

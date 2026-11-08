@@ -63,7 +63,7 @@ Use this section instead of Steps 3 and 4 when `source=` is given.
 1. Read the target range of the source text and extract its hierarchy: 大分類 > 中分類 > 小分類 > 項目 > 細目 > 用語 (terms). Build the keyword tree from the hierarchy down to the terms
 2. Match the tree against the export's existing keywords by name and position. Reuse an existing keyword by its `id`; add a new one to `keywords.add` with a `tempKey`
    - The same term under different items becomes separate keywords, one under each item
-   - When the source lists an abbreviation with its full name, name the keyword with the abbreviation only, and write the full name in the explanations
+   - When the source lists an abbreviation with its full name, name the keyword with the abbreviation only, and write the full name in the explanation of each choice (or the question explanation for the stem) that contains the abbreviation
 3. Decide whether each entry is a term
    - For a term, write at least one question about it. The question does not have to make the term itself the correct answer: a `feature` question about the term, or a question whose correct answer is another word that can only be chosen with knowledge of the term, is also fine. For an important term, add more questions
    - When a term's name literally spells out its meaning (for example 和集合, 温度センサー, スタートビット), a question that names the term from its definition is guessable. Prefer a `feature` question or a question with another correct answer for such terms, or use wrong choices with the same literal structure
@@ -84,8 +84,11 @@ Then continue with Step 5.
   - `feature` questions have 4 choices
   - Reduce the number of choices only when plausible wrong answers cannot be made, and note the reason for the report
   - Exactly one choice is correct
-  - Never write the full name of an abbreviation in the stem or choices; always write it in an explanation
-  - The question and every choice have an explanation
+  - Never write the full name of an abbreviation in the stem or choices. Write the full name of an abbreviation in a choice in that choice's own explanation, and that of an abbreviation in the stem in the question's explanation
+  - Write explanations only where they are needed; write `""` to leave one out:
+    - The question has an explanation only when the choice explanations are not enough to understand it
+    - The correct choice has an explanation only when the stem is not enough to understand it, or when the choice contains an abbreviation
+    - Always explain every wrong choice. Explain a real term briefly; for a non-existent term, write the one quoting sentence described in Step 9
   - Never add a 「わからない」 (don't know) choice. It is a fixed UI choice and is not stored as data
 - References (see `references/exchange-format.md`):
   - Refer to existing keywords and questions by `id`; refer to keywords new in this file by `tempKey` (for example `kw-...`). Give new questions a `tempKey` such as `q-...`
@@ -101,8 +104,8 @@ Check every created or updated question:
 - Exactly one choice has `isCorrect: true`
 - The number of choices matches the kind (6 for `keyword`, 4 for `feature`), or the reduction has a recorded reason
 - No duplicate choices (same or equivalent text) within a question
-- Every abbreviation has its full name in an explanation, and no full name appears in the stem or choices
-- The question and every choice have a non-empty explanation
+- Every abbreviation in a choice has its full name in that choice's own explanation, every abbreviation in the stem has it in the question's explanation, and no full name appears in the stem or choices
+- Every wrong choice has a non-empty explanation. The question and the correct choice have one only when needed (the correct choice always has one when it contains an abbreviation)
 - The question asks about one piece of information only
 - Every question links at least one keyword, and every reference resolves (existing `id` in the export, or a `tempKey` defined in `keywords.add`)
 - Each keyword or question is the target of at most one operation, sibling keywords do not share a name, and no move creates a cycle

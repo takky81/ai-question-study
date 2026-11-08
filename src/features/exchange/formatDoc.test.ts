@@ -23,6 +23,13 @@ describe('exchange-format.md', () => {
     },
   );
 
+  it('解説の空文字と省略の規則を示す（15.1〜15.6）', () => {
+    expect(doc).toMatch(/`""` means no explanation/);
+    expect(doc).not.toContain('Give an explanation for the whole question and for every choice');
+    expect(doc).toMatch(/Always explain every wrong choice/);
+    expect(doc).toMatch(/in that choice's own explanation/);
+  });
+
   it('未出題の条件 attempted が現れない（1.6）', () => {
     expect(doc).not.toContain('`attempted`');
   });

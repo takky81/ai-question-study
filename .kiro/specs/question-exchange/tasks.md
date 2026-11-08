@@ -276,7 +276,7 @@
 
 - [ ] 9. 変更: 解説の省略（2026-11-08 の要件 9.9、15 の変更）
 
-- [ ] 9.1 フォーマット文書と skill を解説の省略に合わせる
+- [x] 9.1 フォーマット文書と skill を解説の省略に合わせる
   - `exchange-format.md` に空の解説の意味と作成の規則を書く。SKILL.md の内容規則と自己点検を合わせる
   - 完了: `skillDoc.test.ts` と `formatDoc.test.ts` が通り、空の解説を含む取込用 JSON が `parseImportFile` で `ok: true` になるテストが通る
   - _Depends: subject-catalog 7.2_

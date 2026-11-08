@@ -127,11 +127,11 @@ The question content consists of the following fields. All of them are required.
 | --- | --- | --- |
 | `kind` | `keyword`, `feature` | Question kind |
 | `stem` | string | Question text |
-| `explanation` | string | Explanation for the whole question |
+| `explanation` | string | Explanation for the whole question. `""` means no explanation |
 | `keywords` | keyword reference array | Linked keywords (at least one) |
 | `choices` | array | The complete set of choices, in display order |
 
-Every choice element requires `body` (string), `explanation` (string), and `isCorrect` (boolean). Only choices inside `update` may also carry the `id` of an existing choice.
+Every choice element requires `body` (string), `explanation` (string), and `isCorrect` (boolean). For `explanation`, `""` means no explanation. Only choices inside `update` may also carry the `id` of an existing choice.
 
 ### Choices: full listing and IDs
 
@@ -175,8 +175,12 @@ Questions in the import JSON must pass the app's authoring-rule validation. Foll
 - A question that asks for a keyword (`keyword`) normally has 6 choices. 2–4 of them are real terms; the rest are non-existent terms or terms outside the study scope
 - A question that asks about a keyword's characteristics (`feature`) normally has 4 choices
 - Use fewer choices only when no plausible distractors exist. Exactly one choice is always correct
-- Never spell out an abbreviation in the stem or the choices. Always give the full name in an explanation
-- Give an explanation for the whole question and for every choice. "わからない" ("I don't know") is a fixed choice in the UI, so never include it in the data
+- Never spell out an abbreviation in the stem or the choices. Give the full name of an abbreviation in a choice in that choice's own explanation, and the full name of an abbreviation in the stem in the question's explanation
+- Write explanations only where they are needed; write `""` to leave one out
+  - Give the whole question an explanation only when the choice explanations are not enough to understand it
+  - Give the correct choice an explanation only when the stem is not enough to understand it, or when the choice contains an abbreviation
+  - Always explain every wrong choice. Explain a real term briefly; for a non-existent term, write one sentence that quotes the choice and states that the term does not exist, for example 「「LSMT」は実在しない語である。」
+- "わからない" ("I don't know") is a fixed choice in the UI, so never include it in the data
 - Do not repeat choice text within a question
 
 ## Example
