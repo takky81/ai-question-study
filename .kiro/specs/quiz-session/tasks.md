@@ -244,7 +244,7 @@
   - _Boundary: src/features/quiz/handedness.ts, src/features/quiz/HandednessToggle.tsx_
   - _Requirements: 11.1, 11.8_
 
-- [ ] 11.2 (P) 選択肢一覧で「？」と ○× の列を左右どちらにも置けるようにする
+- [x] 11.2 (P) 選択肢一覧で「？」と ○× の列を左右どちらにも置けるようにする
   - `ChoiceList` に `side` prop（省略時 `'right'`）を加え、左手用では DOM の順番を「列 → 選択領域」にし、境界線を `border-r` にする。「わからない」の行の判定後の ×も同じ側に置く
   - 完了: `ChoiceList.test.tsx` で、`side='left'` のとき各行の最初の子が「？」（判定後は `mark-cell`）、`side='right'` のとき最後の子であることと、既存のテストが通る
   - _Boundary: src/features/quiz/ChoiceList.tsx_

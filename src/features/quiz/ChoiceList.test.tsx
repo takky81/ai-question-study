@@ -147,4 +147,65 @@ describe('ChoiceList', () => {
     );
     expect(container.querySelector('p')).toBeNull();
   });
+
+  describe('配置（side）', () => {
+    function rowOf(li: HTMLElement) {
+      return li.firstElementChild as HTMLElement;
+    }
+
+    it('左手用・判定前: 各行の先頭に「？」ボタンを置き、境界線は右側', () => {
+      render(<ChoiceList choices={choices} selection={null} correctChoiceId={null} side="left" onAnswer={vi.fn()} />);
+      for (const c of choices) {
+        const guess = screen.getByRole('button', { name: `推測で解答: ${c.body}` });
+        expect(rowOf(item(c.body)).firstElementChild).toBe(guess);
+        expect(guess).toHaveClass('border-r');
+        expect(guess).not.toHaveClass('border-l');
+      }
+      // 本文は左揃えのまま
+      expect(screen.getByRole('button', { name: '選択肢A' })).toHaveClass('text-left');
+    });
+
+    it('左手用・判定前: Tab 順は「？」→ 選択領域', async () => {
+      render(<ChoiceList choices={choices} selection={null} correctChoiceId={null} side="left" onAnswer={vi.fn()} />);
+      await userEvent.tab();
+      expect(screen.getByRole('button', { name: '推測で解答: 選択肢A' })).toHaveFocus();
+      await userEvent.tab();
+      expect(screen.getByRole('button', { name: '選択肢A' })).toHaveFocus();
+    });
+
+    it('左手用・判定後: 各行の先頭に印セルを置き、「わからない」の印セルも先頭', () => {
+      const { rerender } = render(
+        <ChoiceList choices={choices} selection={{ choiceId: 'b' }} correctChoiceId="a" side="left" onAnswer={vi.fn()} />,
+      );
+      for (const c of choices) {
+        const cell = cellOf(item(c.body));
+        expect(rowOf(item(c.body)).firstElementChild).toBe(cell);
+        expect(cell).toHaveClass('w-11', 'border-r');
+        expect(cell).not.toHaveClass('border-l');
+      }
+      rerender(
+        <ChoiceList choices={choices} selection={{ choiceId: null }} correctChoiceId="a" side="left" onAnswer={vi.fn()} />,
+      );
+      const unknown = cellOf(item('わからない'));
+      expect(rowOf(item('わからない')).firstElementChild).toBe(unknown);
+      expect(unknown).toHaveClass('border-r');
+    });
+
+    it('右手用（省略時も同じ）: 各行の末尾に「？」ボタン・印セルを置き、境界線は左側', () => {
+      const { rerender } = render(
+        <ChoiceList choices={choices} selection={null} correctChoiceId={null} side="right" onAnswer={vi.fn()} />,
+      );
+      for (const c of choices) {
+        const guess = screen.getByRole('button', { name: `推測で解答: ${c.body}` });
+        expect(rowOf(item(c.body)).lastElementChild).toBe(guess);
+        expect(guess).toHaveClass('border-l');
+      }
+      rerender(<ChoiceList choices={choices} selection={{ choiceId: null }} correctChoiceId="a" onAnswer={vi.fn()} />);
+      for (const name of ['選択肢A', '選択肢B', 'わからない']) {
+        const cell = cellOf(item(name));
+        expect(rowOf(item(name)).lastElementChild).toBe(cell);
+        expect(cell).toHaveClass('border-l');
+      }
+    });
+  });
 });
