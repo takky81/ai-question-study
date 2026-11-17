@@ -359,4 +359,55 @@ describe('QuizPlayPage', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: '次へ' })).toBeEnabled());
     expect(screen.getByRole('button', { name: '次へ' }).parentElement).toHaveClass('left-4');
   });
+
+  describe('成績表示の正誤（12.3、12.5、12.6、12.9、4.4）', () => {
+    it('正解の選択肢で「○ 正解」を出し、判定前と「次へ」の後は出さない', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      const s1 = await firstStem();
+      expect(screen.queryByText('○ 正解')).toBeNull();
+      expect(screen.queryByText('× 不正解')).toBeNull();
+      await user.click(screen.getByRole('button', { name: `${s1}正解` }));
+      expect(await screen.findByText('○ 正解')).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByRole('button', { name: '次へ' })).toBeEnabled());
+      await user.click(screen.getByRole('button', { name: '次へ' }));
+      await screen.findByRole('heading', { name: s1 === '問1' ? '問2' : '問1' });
+      expect(screen.queryByText('○ 正解')).toBeNull();
+      expect(screen.queryByText('× 不正解')).toBeNull();
+    });
+
+    it('不正解の選択肢で「× 不正解」を出す', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      const s1 = await firstStem();
+      await user.click(screen.getByRole('button', { name: `${s1}誤り` }));
+      expect(await screen.findByText('× 不正解')).toBeInTheDocument();
+      expect(screen.queryByText('○ 正解')).toBeNull();
+    });
+
+    it('「わからない」で「× 不正解」を出す', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await firstStem();
+      await user.click(screen.getByRole('button', { name: /^わからない/ }));
+      expect(await screen.findByText('× 不正解')).toBeInTheDocument();
+    });
+
+    it('「？」エリアで正解を選ぶと「○ 正解」を出す', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      const s1 = await firstStem();
+      await user.click(screen.getByRole('button', { name: `推測で解答: ${s1}正解` }));
+      expect(await screen.findByText('○ 正解')).toBeInTheDocument();
+    });
+
+    it('左手用でも同じ「○ 正解」を出す', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      const s1 = await firstStem();
+      await user.click(screen.getByRole('button', { name: '左手用' }));
+      await user.click(screen.getByRole('button', { name: `${s1}正解` }));
+      expect(await screen.findByText('○ 正解')).toBeInTheDocument();
+    });
+  });
 });

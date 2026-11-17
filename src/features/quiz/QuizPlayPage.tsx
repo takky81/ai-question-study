@@ -27,9 +27,9 @@ import { DEFAULT_HANDEDNESS, type Handedness } from './handedness';
 import { HandednessToggle } from './HandednessToggle';
 import { createFlagSaver, type FlagSaveStatus, type FlagSaver } from './flagAutosave';
 import type { CheckboxFlagId } from './flags';
-import { QuestionStatsBar } from './QuestionStatsBar';
+import { QuestionStatsBar, type AnswerOutcome } from './QuestionStatsBar';
 import { parseRangeParams, toRangeParams } from './range';
-import { createInitialSession, nextQuestionId, sessionReducer } from './session';
+import { createInitialSession, nextQuestionId, sessionReducer, type SessionState } from './session';
 import { SessionSummary } from './SessionSummary';
 import type { AnswerKind } from './types';
 
@@ -44,6 +44,14 @@ function nextDockClass(side: Handedness): string {
 
 function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+// 成績表示に渡す正誤。判定後かつ選択ありのときだけ導く。「わからない」（choiceId が null）は不正解、
+// 「？」エリアも通常どおり判定する。sessionReducer の answered と同じ式で、成績の数え方と一致させる（12.3、12.5、12.6、4.4）
+function deriveOutcome(state: SessionState): AnswerOutcome | null {
+  if (state.phase !== 'judged' || state.selection === null) return null;
+  const { choiceId } = state.selection;
+  return choiceId !== null && choiceId === state.correctChoiceId ? 'correct' : 'incorrect';
 }
 
 type OpenFlags = { questionId: string; flags: CheckboxFlagId[]; comment: string | null; saver: FlagSaver };
@@ -261,7 +269,7 @@ export function QuizPlayPage(): ReactElement | null {
 
       {current !== null && (state.phase === 'answering' || judged) && (
         <>
-          {state.stats !== null && <QuestionStatsBar stats={state.stats} />}
+          {state.stats !== null && <QuestionStatsBar stats={state.stats} outcome={deriveOutcome(state)} />}
           <h3
             ref={questionHeading}
             tabIndex={-1}

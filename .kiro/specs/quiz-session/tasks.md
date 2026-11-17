@@ -272,7 +272,7 @@
   - _Boundary: src/features/quiz/QuestionStatsBar.tsx_
   - _Requirements: 12.1, 12.2, 12.4, 12.5, 12.7, 12.8, 12.9_
 
-- [ ] 12.2 解答画面で正誤を導いて成績表示に渡す
+- [x] 12.2 解答画面で正誤を導いて成績表示に渡す
   - `QuizPlayPage` に `deriveOutcome(state)`（`judged` かつ選択ありのとき、`choiceId !== null && choiceId === correctChoiceId` なら正解、それ以外は不正解、ほかの phase は `null`）を置き、`QuestionStatsBar` に渡す。`sessionReducer` は変えない
   - 完了: `QuizPlayPage.test.tsx` で、正解で「○ 正解」、誤答と「わからない」で「× 不正解」、「？」エリアで正解なら「○ 正解」、次の問題で正誤の文字が消え、左手用でも同じ表示になることが通り、typecheck・test・build が通る
   - _Depends: 12.1_
