@@ -23,6 +23,8 @@ import {
 } from './api';
 import { ChoiceList } from './ChoiceList';
 import { FlagForm } from './FlagForm';
+import { DEFAULT_HANDEDNESS, type Handedness } from './handedness';
+import { HandednessToggle } from './HandednessToggle';
 import { createFlagSaver, type FlagSaveStatus, type FlagSaver } from './flagAutosave';
 import type { CheckboxFlagId } from './flags';
 import { QuestionStatsBar } from './QuestionStatsBar';
@@ -32,8 +34,13 @@ import { SessionSummary } from './SessionSummary';
 import type { AnswerKind } from './types';
 
 const BUTTON = 'tap-target focus-ring rounded border px-4 disabled:opacity-50';
-// 判定後の「次へ」を右下に固定する。モバイルは下部導線（AppLayout の lg:hidden）の上、PC は右下（5.10、5.11）
-const NEXT_DOCK = 'fixed right-4 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 lg:right-6 lg:bottom-6';
+// 判定後の「次へ」を固定する位置。右手用は右下、左手用は左下。モバイルは下部導線（AppLayout の lg:hidden）の上（5.10、5.11、11.6）。
+// Tailwind が検出できるよう、クラス文字列は組み立てず完全なリテラルで持つ
+function nextDockClass(side: Handedness): string {
+  return side === 'left'
+    ? 'fixed left-4 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 lg:left-6 lg:bottom-6'
+    : 'fixed right-4 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 lg:right-6 lg:bottom-6';
+}
 
 function messageOf(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -60,6 +67,8 @@ export function QuizPlayPage(): ReactElement | null {
   const [openFlags, setOpenFlags] = useState<OpenFlags | null>(null);
   const [flagsError, setFlagsError] = useState<string | null>(null);
   const [flagsTry, setFlagsTry] = useState(0);
+  // 操作の配置。セッション中だけ保持し、reducer にも永続化にも載せない（11.2、11.7、11.9）
+  const [side, setSide] = useState<Handedness>(DEFAULT_HANDEDNESS);
   const questionHeading = useRef<HTMLHeadingElement>(null);
   // 「次へ」「終了」の flush 待機中か。ボタンは disabled にせず（blur 直後の click を失わないため）二重クリックを無視する
   const leaving = useRef(false);
@@ -215,10 +224,13 @@ export function QuizPlayPage(): ReactElement | null {
 
   return (
     <section aria-labelledby={headingId} className="mx-auto flex w-full min-w-0 max-w-[40rem] flex-col gap-4">
-      <div className="flex min-w-0 items-center justify-between gap-2">
+      {/* 狭い画面で横スクロールが出ないよう折り返す（10.2） */}
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
         <h2 id={headingId} className="text-lg font-bold">
           出題
         </h2>
+        {/* 配置の切り替えは解答中・判定後だけ出す（11.1） */}
+        {(state.phase === 'answering' || judged) && <HandednessToggle value={side} onChange={setSide} />}
         {state.phase !== 'finished' && (
           <button
             type="button"
@@ -263,6 +275,7 @@ export function QuizPlayPage(): ReactElement | null {
             correctChoiceId={state.correctChoiceId}
             disabled={judged}
             onAnswer={answer}
+            side={side}
           />
           <AnswerFeedback
             judged={judged}
@@ -311,7 +324,7 @@ export function QuizPlayPage(): ReactElement | null {
           {/* 「次へ」は判定後だけ表示する（5.8）。固定した「次へ」が最後の内容を覆わないよう末尾に余白を置く（5.11） */}
           {judged && (
             <>
-              <div className={NEXT_DOCK}>
+              <div className={nextDockClass(side)}>
                 <button
                   type="button"
                   disabled={state.recordStatus !== 'saved'}

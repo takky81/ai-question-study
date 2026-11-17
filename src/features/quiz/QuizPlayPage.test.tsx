@@ -313,4 +313,50 @@ describe('QuizPlayPage', () => {
     await user.click(screen.getByRole('button', { name: '終了' }));
     expect(screen.getByTestId('loc')).toHaveTextContent(`/quiz?subject=${S1}`);
   });
+  it('配置は右手用で始まり、判定後に左手用へ切り替えても選択・正誤・フラグ入力・統計を保ち、「次へ」を左下へ移す。次の問題でも左手用のまま（11.1、11.2、11.5〜11.7、11.9、5.10、5.11）', async () => {
+    const user = userEvent.setup();
+    const { container } = renderPage();
+    const s1 = await firstStem();
+    // 初期値は右手用（11.2）
+    expect(screen.getByRole('button', { name: '右手用' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '左手用' })).toHaveAttribute('aria-pressed', 'false');
+
+    await judgeFirst(user);
+    await user.click(screen.getByLabelText('問う価値が低い'));
+    const marks = () =>
+      [...container.querySelectorAll('[data-testid="mark-cell"]')].map((e) => `${e.textContent}|${e.innerHTML}`);
+    const choiceButtons = () =>
+      screen
+        .getAllByRole('button')
+        .filter((b) => b.textContent?.startsWith(s1))
+        .map((b) => `${b.textContent}|${b.className}`);
+    const stats = () => container.textContent?.match(/正答[^問]*/)?.[0];
+    const beforeMarks = marks();
+    const beforeChoices = choiceButtons();
+    const statsText = stats();
+    // 比較が空配列や undefined で素通りしないことを先に確かめる
+    expect(beforeMarks.length).toBeGreaterThan(0);
+    expect(beforeChoices.length).toBeGreaterThan(0);
+    expect(statsText).toBeDefined();
+    expect(screen.getByRole('button', { name: '次へ' }).parentElement).toHaveClass('right-4');
+
+    await user.click(screen.getByRole('button', { name: '左手用' }));
+    expect(screen.getByRole('button', { name: '左手用' })).toHaveAttribute('aria-pressed', 'true');
+    const dock = screen.getByRole('button', { name: '次へ' }).parentElement as HTMLElement;
+    expect(dock).toHaveClass('fixed', 'left-4', 'z-10', 'lg:left-6', 'lg:bottom-6');
+    expect(dock).not.toHaveClass('right-4');
+    expect(marks()).toEqual(beforeMarks);
+    expect(choiceButtons()).toEqual(beforeChoices);
+    expect(screen.getByLabelText('問う価値が低い')).toBeChecked();
+    expect(stats()).toBe(statsText);
+    expect(m.recordAnswer).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: '次へ' }));
+    const s2 = s1 === '問1' ? '問2' : '問1';
+    await screen.findByRole('heading', { name: s2 });
+    expect(screen.getByRole('button', { name: '左手用' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: `${s2}誤り` }));
+    await waitFor(() => expect(screen.getByRole('button', { name: '次へ' })).toBeEnabled());
+    expect(screen.getByRole('button', { name: '次へ' }).parentElement).toHaveClass('left-4');
+  });
 });

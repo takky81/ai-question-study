@@ -250,7 +250,7 @@
   - _Boundary: src/features/quiz/ChoiceList.tsx_
   - _Requirements: 4.3, 11.3, 11.4_
 
-- [ ] 11.3 解答画面に配置の切り替えをつなぐ
+- [x] 11.3 解答画面に配置の切り替えをつなぐ
   - `QuizPlayPage` に `useState(DEFAULT_HANDEDNESS)` を持ち、見出し行に `HandednessToggle` を置き（解答中・判定後だけ）、`ChoiceList` の `side` と、`NEXT_DOCK` を置き換えた `nextDockClass(side)`（左右2つの完全な class 文字列）に渡す。保存はしない
   - 完了: `QuizPlayPage.test.tsx` で、判定後に左手用へ切り替えても選択・正誤・フラグ入力・成績が変わらず「次へ」の親に `left-4` が付くこと、次の問題でも左手用のままであることが通り、typecheck・test・build が通る
   - _Depends: 11.1, 11.2_
