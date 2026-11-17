@@ -119,3 +119,10 @@
 - `.kiro/specs/app-foundation/design.md` — ルート、テーマトークン、ページング
 - `.kiro/specs/subject-catalog/design.md` — スキーマ、`servable_questions`、`keyword_subtree_ids`、`keywordTree.ts`
 - `.kiro/steering/tech.md`、`.kiro/steering/product.md` — 実装標準、問題フラグの定義
+
+## 2026-11-17: 成績表示の正誤による色分け（Requirement 12）
+
+- 調査範囲: 軽量（既存の `QuestionStatsBar`、`session.ts` の判定式、`src/index.css` の正誤トークン）。
+- 発見: 基盤の正誤色は「正解＝赤（`--c-correct`）、不正解＝青（`--c-incorrect`）」で、選択肢の ○× と同じ。要件 12.7 に従い、成績表示もこのトークンを使う（緑／赤は採用しない）。
+- 決定: 正誤は `sessionReducer` に新しい状態を足さず、`selection` と `correctChoiceId` から画面側で導く。判定式は `answered` と同じにし、成績の加算と色を一致させる。
+- 決定: レイアウトのずれ（12.8）を防ぐため、通常時も透明の枠と正誤の文字の領域を確保する。

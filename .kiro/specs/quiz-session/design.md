@@ -186,6 +186,10 @@ e2e/
   - `src/features/quiz/ChoiceList.tsx` — prop `side` を受け取り、「？」エリアと `MarkCell` の列を左右どちらの端に置くかを切り替える
   - `src/features/quiz/QuizPlayPage.tsx` — 配置の state を持ち、`ChoiceList` と「次へ」の固定位置に渡す
   - `src/features/quiz/HandednessToggle.test.tsx`（新規）、`ChoiceList.test.tsx`、`QuizPlayPage.test.tsx`、`e2e/quiz.spec.ts` — テストの追加
+- 2026-11-17 の要件変更（Requirement 12）で変更するファイル（DB・RPC・共通のトークンの変更なし）:
+  - `src/features/quiz/QuestionStatsBar.tsx` — prop `outcome` を受け取り、判定後は枠・背景・文字を正誤の色にし、「○ 正解」「× 不正解」を併記する
+  - `src/features/quiz/QuizPlayPage.tsx` — `state` から `outcome` を導いて `QuestionStatsBar` に渡す
+  - `src/features/quiz/QuestionStatsBar.test.tsx`、`QuizPlayPage.test.tsx`、`e2e/quiz.spec.ts` — テストの追加
 - `supabase/seed.sql` — E2E 用に、出題対象・無効・削除の問題と途中ノードへの紐づけを含む科目と、1,050 問・1,200 キーワードの大量データ用科目を追加する（ローカル専用）
 
 ## System Flows
@@ -330,6 +334,15 @@ sequenceDiagram
 | 11.7 | 終了後・再読み込み後は保持しない | QuizPlayPage | 永続化しない（URL・ストレージ・DB に書かない） | — |
 | 11.8 | 切り替えは 44px 以上、キーボード操作可、現在の配置がわかる | HandednessToggle | `tap-target`、`focus-ring`、`aria-pressed` | — |
 | 11.9 | 左下でも内容と下部導線を隠さない | QuizPlayPage | 既存のスペーサーと同じ `bottom` のオフセット | — |
+| 12.1 | 正解なら成績表示を正解の色 | QuestionStatsBar、QuizPlayPage | `outcome = 'correct'` → `mark-correct` と `border-correct` | — |
+| 12.2 | 不正解なら成績表示を不正解の色 | QuestionStatsBar、QuizPlayPage | `outcome = 'incorrect'` → `mark-incorrect` と `border-incorrect` | — |
+| 12.3 | 「わからない」は不正解、「？」は判定どおり | QuizPlayPage | `deriveOutcome`: `choiceId === null` は不正解、それ以外は `choiceId === correctChoiceId` | — |
+| 12.4 | 「○ 正解」「× 不正解」を併記 | QuestionStatsBar | 正誤の文字の span | — |
+| 12.5 | 判定前は通常の表示 | QuizPlayPage | `phase !== 'judged'` で `outcome = null` | — |
+| 12.6 | 次の問題では通常の表示 | QuizPlayPage | `next` で `phase` が `loading`→`answering` になり `null` | — |
+| 12.7 | 選択肢と同じ基盤の正誤色、両テーマで判別可 | QuestionStatsBar | 既存の `mark-correct`／`mark-incorrect` と `--c-correct`／`--c-incorrect` | — |
+| 12.8 | 大きさ・位置を変えない | QuestionStatsBar | 枠・余白は常に同じ幅で描き（通常時は透明の枠）、正誤の文字の領域は常に幅を確保する | — |
+| 12.9 | 配置にかかわらず同じ色分け | QuestionStatsBar | `side` を受け取らない | — |
 
 ## Components and Interfaces
 
@@ -643,6 +656,16 @@ export function choiceDisplayState(
 - 「次へ」の位置: 定数 `NEXT_DOCK` を `nextDockClass(side)` に置き換える。`bottom` のオフセット、`z-10`、スペーサーは共通のまま、横方向だけを `right-4 lg:right-6`（右手用）／`left-4 lg:left-6`（左手用）にする（5.10、5.11、11.3、11.4、11.9）。Tailwind がクラスを検出できるよう、2つの完全な文字列を定数で持つ（動的な文字列連結はしない）。
 - `ChoiceList` の `side` prop（省略時 `'right'`）: 列（`COLUMN`）の境界線を `side = 'right'` なら `border-l`、`'left'` なら `border-r` にする。行の DOM 上の順番も見た目と同じにする（左手用は列 → 選択領域）。`flex-row-reverse` は使わない（見た目と Tab 順がずれるため。10.3）。本文は常に左揃えのまま。「わからない」の行の判定後の `MarkCell` も同じ側に置く（4.7、5.9）。
 
+#### 成績表示の正誤による色分け（Requirement 12、2026-11-17）
+
+- 型: `type AnswerOutcome = 'correct' | 'incorrect'`（`QuestionStatsBar.tsx` から export）。
+- `QuestionStatsBar`（`{ stats: QuestionStats; outcome: AnswerOutcome | null }`）:
+  - 外側を `rounded border-2 px-2 py-1` の行にし、`outcome` が `null` のときは `border-transparent text-text-muted`、`'correct'` のときは `mark-correct border-correct`、`'incorrect'` のときは `mark-incorrect border-incorrect` を付ける（12.1、12.2、12.5、12.7）。色は選択肢の正誤表示と同じ基盤のトークンなので、両テーマのコントラストは基盤で担保済み。
+  - 成績の文字列の前に正誤の文字の span（`inline-block w-[5em] font-bold`）を常に置き、`'correct'` は「○ 正解」、`'incorrect'` は「× 不正解」、`null` は空にする。枠と文字の領域を常に確保するため、判定の前後で大きさと位置が変わらない（12.4、12.8）。
+  - 既存の `aria-live="polite"` のままにし、判定時に正誤と更新後の成績が読み上げられる。
+  - 配置（`side`）は受け取らず、右手用・左手用で同じ表示にする（12.9）。
+- `QuizPlayPage`: `deriveOutcome(state)` を同じファイル内の関数で定義する。`phase === 'judged'` かつ `selection !== null` のときだけ、`selection.choiceId !== null && selection.choiceId === correctChoiceId` なら `'correct'`、それ以外は `'incorrect'` を返し、それ以外の phase では `null` を返す（12.3、12.5、12.6）。判定は `sessionReducer` の `answered` と同じ式なので、成績の数え方と色が一致する。`sessionReducer` は変更しない。
+
 #### QuestionStatsBar / AnswerFeedback / SessionSummary
 
 - `QuestionStatsBar`: 「正答 3 / 出題 5（60%）」の形式。出題数 0 は「未出題」。判定後は `session.stats` の更新値を表示する（6.1〜6.3）。
@@ -769,6 +792,7 @@ erDiagram
 - `QuizPlayPage.test.tsx`（追加分）: 保存中に「次へ」を押すと完了後に遷移する、保存失敗中は遷移しない（7.6）。判定前は「次へ」とスペーサーがない、判定後は `fixed` の class とスペーサーが付き、「次へ」が DOM 上で `FlagForm` の後にある（5.10、5.11、10.3）
 - `QuestionStatsBar.test.tsx`: 未出題の表示と判定後の更新（6.1〜6.3）
 
+- 成績表示の色分け（Requirement 12）: `QuestionStatsBar.test.tsx` — `outcome=null` で正誤の文字が空で `border-transparent`、`'correct'` で「○ 正解」と `mark-correct`、`'incorrect'` で「× 不正解」と `mark-incorrect`（12.1、12.2、12.4、12.5）。`QuizPlayPage.test.tsx` — 正解の選択で「○ 正解」、誤答・「わからない」で「× 不正解」、「？」エリアで正解を選ぶと「○ 正解」、次の問題で正誤の文字が消える、左手用でも同じ表示（12.3、12.6、12.9）。
 - 配置の切り替え（Requirement 11）: `HandednessToggle.test.tsx` — 初期は「右手用」が `aria-pressed="true"`、「左手用」のクリックと Enter／Space で `onChange('left')`（11.1、11.8）。`ChoiceList.test.tsx` — `side='left'` で各行の最初の子が「？」ボタン（判定後は `mark-cell`）で `border-r` を持ち、`side='right'` で最後の子になる（11.3、11.4）。`QuizPlayPage.test.tsx` — 判定後に「左手用」に切り替えても選択・正誤・フラグの入力・成績が変わらず、「次へ」の親に `left-4` が付く。次の問題に進んでも左手用のまま（11.5、11.6）。
 
 ### E2E Tests（Playwright、ローカル Supabase、直列）
@@ -796,6 +820,7 @@ erDiagram
   - 1,050 問・1,200 キーワードの seed で `list_quiz_candidates`、`question_stats`、`keyword_stats` を `fetchAllPages` で全件取得して欠落・重複がない（9.7）
   - クライアントから `rpc('resolve_question_flags')` と `schema('quiz_private').rpc('resolve_question_flags')` が失敗する。テスト用の SQL 接続（`set role authenticated` と JWT クレームの設定）で、例外で終わるトランザクション内の呼び出しがロールバックされ、成功時は `open` だけが `resolved` になって `resolved_at` が記録され、解消済みの行が残り、変更できない（8.1〜8.5）
 
+- 成績表示の色分け（Requirement 12）は `e2e/quiz.spec.ts` に追加する: 390×844 で、判定前は成績表示に正誤の文字がない。正解を選ぶと成績表示に「○ 正解」が出て、成績表示の `boundingBox` の高さと上端が判定前と同じ。次の問題で文字が消え、誤答で「× 不正解」が出る（12.1、12.2、12.4〜12.8）。
 - 配置の切り替え（Requirement 11）は `e2e/quiz.spec.ts` に追加する: 390×844 で、解答画面を開くと「右手用」が選択中で「？」エリアが選択肢の右端にある。「左手用」に切り替えると「？」エリアの `boundingBox` が選択領域より左にあり、判定後の「次へ」がビューポート内の左下にあり、下端が下部導線の上端より上、最下部までスクロールしても最後の内容の下端が「次へ」の上端より上にある。次の問題でも左手用のまま。再読み込みと「終了」→再開始で右手用に戻る（11.2〜11.4、11.6、11.7、11.9）。
 
 ## Security Considerations
