@@ -264,7 +264,7 @@
   - _Boundary: e2e/quiz.spec.ts_
   - _Requirements: 11.2, 11.3, 11.4, 11.6, 11.7, 11.9_
 
-- [ ] 12. 変更: 成績表示を正誤に合わせて色分けする（2026-11-17 の Requirement 12）
+- [x] 12. 変更: 成績表示を正誤に合わせて色分けする（2026-11-17 の Requirement 12）
 
 - [x] 12.1 成績表示に正誤の色と文字を付けられるようにする
   - `QuestionStatsBar` に `outcome: AnswerOutcome | null` を加え（型 `AnswerOutcome` を export）、常に `rounded border-2 px-2 py-1` の枠と幅を確保した正誤の文字の span を描き、`null` は透明の枠と `text-text-muted`、`'correct'` は `mark-correct border-correct` と「○ 正解」、`'incorrect'` は `mark-incorrect border-incorrect` と「× 不正解」にする
@@ -279,7 +279,7 @@
   - _Boundary: src/features/quiz/QuizPlayPage.tsx_
   - _Requirements: 12.3, 12.5, 12.6, 12.9_
 
-- [ ] 12.3 成績表示の色分けの E2E を追加する
+- [x] 12.3 成績表示の色分けの E2E を追加する
   - `e2e/quiz.spec.ts` に、390×844 で判定前は正誤の文字がなく、正解で「○ 正解」が出て成績表示の高さと上端が判定前と同じ、次の問題で消え、誤答で「× 不正解」が出ることを追加する
   - 完了: `npx playwright test e2e/quiz.spec.ts` がローカル Supabase で通る
   - _Depends: 12.2_
@@ -307,3 +307,4 @@
 - 5.1: e2e/quiz-db.spec.ts の SQL 接続は docker exec psql（SUPABASE_DB_CONTAINER で変更可、CI では E2E を実行しない）。後片付けは子テーブルだけ session_replication_role=replica で消してから科目を削除する。seed の問題には解答を作らない。
 - 5.2: e2e/quiz.spec.ts の後片付けは共通接頭辞 quiz-ui-% で消す（workers: 1 前提）。並列実行にする場合は run 単位に絞ること。
 - 11.3: prettier を実行するとシングルクォートがダブルクォートに書き換わる（リポジトリの書式と合わない）。prettier --write は使わず、既存の書式のまま最小の差分で編集する。
+- 12.3: 成績表示の <p> は判定後に「○ 正解」「× 不正解」で始まり、`mark-correct`／`mark-incorrect` も持つ。E2E で成績の文字列や正誤色を探すときは、成績表示を「成績の文字列を含む <p>」で、選択肢の正誤色を `li.mark-*` で絞ること。

@@ -201,7 +201,7 @@ const nextButton = (page: Page) => page.getByRole('button', { name: '次へ', ex
 const treeItem = (page: Page, name: string) => page.getByRole('treeitem', { name, exact: true });
 const choiceItem = (page: Page, body: string) =>
   page.getByRole('listitem').filter({ has: page.getByRole('button', { name: body, exact: true }) });
-const statsBar = (page: Page) => page.getByText(/^正答 \d+ \/ 出題 \d+（.+）$/);
+const statsBar = (page: Page) => page.locator('p', { hasText: /正答 \d+ \/ 出題 \d+（.+）/ });
 
 async function openStart(page: Page, subjectName: string): Promise<void> {
   await page.goto('/quiz');
@@ -280,7 +280,7 @@ test.describe('範囲選択から終了まで', () => {
 
     // 問1（作成順で最初の未出題）: 判定前は印・解説・フラグなし、未出題の成績（2.1、5.7、6.3）
     await expect(page.getByRole('heading', { name: '問1', exact: true })).toBeVisible();
-    await expect(statsBar(page)).toHaveText('正答 0 / 出題 0（未出題）');
+    await expect(statsBar(page)).toContainText('正答 0 / 出題 0（未出題）');
     await expect(page.getByText('問1の正解の解説')).toHaveCount(0);
     await expect(page.getByRole('region', { name: '解説' })).toHaveCount(0);
     await expect(nextButton(page)).toHaveCount(0); // 判定前は表示しない（5.8）
@@ -300,7 +300,7 @@ test.describe('範囲選択から終了まで', () => {
     const fb1 = page.getByRole('region', { name: '解説' });
     await expect(fb1.getByText('問1の全体解説')).toBeVisible();
     await expect(fb1.getByText('親 / 中', { exact: true })).toBeVisible();
-    await expect(statsBar(page)).toHaveText('正答 1 / 出題 1（100%）');
+    await expect(statsBar(page)).toContainText('正答 1 / 出題 1（100%）');
     await expect(page.getByRole('button', { name: '問1の誤答', exact: true })).toBeDisabled();
     await waitSaved(page);
     await expect(page.getByRole('region', { name: '問題フラグ' })).toBeVisible();
@@ -318,7 +318,7 @@ test.describe('範囲選択から終了まで', () => {
     await expectMark(page, '問2の誤答', '不正解');
     await expectMark(page, '問2の正解', '正解');
     await expect(page.getByRole('region', { name: '解説' }).getByText('親 / 中 / 葉', { exact: true })).toBeVisible();
-    await expect(statsBar(page)).toHaveText('正答 0 / 出題 1（0%）');
+    await expect(statsBar(page)).toContainText('正答 0 / 出題 1（0%）');
     await waitSaved(page);
     await nextButton(page).click();
 
@@ -330,7 +330,7 @@ test.describe('範囲選択から終了まで', () => {
     const fb3 = page.getByRole('region', { name: '解説' });
     await expect(fb3.getByText('親 / 中', { exact: true })).toBeVisible();
     await expect(fb3.getByText('親 / 中 / 葉', { exact: true })).toBeVisible();
-    await expect(statsBar(page)).toHaveText('正答 1 / 出題 1（100%）');
+    await expect(statsBar(page)).toContainText('正答 1 / 出題 1（100%）');
     await waitSaved(page);
     await expect(page.getByRole('checkbox', { name: '知識がなくても推測で解ける' })).toBeChecked();
     await expect(page.getByRole('checkbox', { name: '問う価値が低い' })).not.toBeChecked();
@@ -370,7 +370,7 @@ test.describe('範囲選択から終了まで', () => {
     await expect(choiceItem(page, '旗問の誤答').getByTestId('mark-cell')).toHaveText('');
     await expect(page.getByText('旗問の全体解説')).toBeVisible();
     await expect(page.getByRole('region', { name: '解説' }).getByText('フラグ語', { exact: true })).toBeVisible();
-    await expect(statsBar(page)).toHaveText('正答 0 / 出題 1（0%）');
+    await expect(statsBar(page)).toContainText('正答 0 / 出題 1（0%）');
     await waitSaved(page);
 
     // 保存ボタンはなく、チェックの操作だけで記録され、外すと消える（7.2、7.4、7.10）
@@ -408,7 +408,7 @@ test.describe('範囲選択から終了まで', () => {
     await page.reload();
     await expect(page.getByRole('heading', { name: '旗問', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '旗問の正解', exact: true }).click();
-    await expect(statsBar(page)).toHaveText('正答 1 / 出題 2（50%）');
+    await expect(statsBar(page)).toContainText('正答 1 / 出題 2（50%）');
     await waitSaved(page);
     await expect(lowValue).toBeChecked();
     await expect(defective).toBeChecked();
@@ -557,8 +557,8 @@ test.describe('レスポンシブ・キーボード・テーマ・導線', () =>
         };
         return {
           body: pick('body'),
-          correct: pick('.mark-correct'),
-          incorrect: pick('.mark-incorrect'),
+          correct: pick('li.mark-correct'),
+          incorrect: pick('li.mark-incorrect'),
           bgToken: getComputedStyle(document.documentElement).getPropertyValue('--c-bg').trim(),
         };
       });
@@ -567,7 +567,7 @@ test.describe('レスポンシブ・キーボード・テーマ・導線', () =>
       await openPlay(page, uiSubject.id);
       await expect(page.getByRole('heading', { name: '表示問', exact: true })).toBeVisible();
       await page.getByRole('button', { name: '表示問の誤答', exact: true }).click();
-      await expect(page.locator('.mark-incorrect')).toHaveCount(1);
+      await expect(page.locator('li.mark-incorrect')).toHaveCount(1);
     };
 
     await page.emulateMedia({ colorScheme: 'light' });
@@ -735,6 +735,39 @@ test.describe('レスポンシブ・キーボード・テーマ・導線', () =>
     await expect(heading).toBeVisible();
     await expect(right).toHaveAttribute('aria-pressed', 'true');
     await expect(left).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('成績表示の色分け: 判定前は正誤の文字がなく、正解で「○ 正解」、次へで消え、不正解で「× 不正解」、大きさと位置は変わらない', async ({
+    page,
+  }) => {
+    const heading = page.getByRole('heading', { name: /^配置問[12]$/ });
+
+    // 判定前は正誤の文字がない（12.4、12.6）
+    await openPlay(page, handSubject.id);
+    await expect(heading).toBeVisible();
+    await expect(statsBar(page)).toBeVisible();
+    await expect(statsBar(page)).not.toContainText('正解');
+    const before = (await statsBar(page).boundingBox())!;
+
+    // 正解すると成績表示の中に「○ 正解」が出て、大きさと位置は変わらない（12.1、12.5、12.8）
+    let stem = (await heading.textContent())!;
+    await page.getByRole('button', { name: `${stem}の正解`, exact: true }).click();
+    await waitSaved(page);
+    await expect(statsBar(page)).toContainText('○ 正解');
+    const after = (await statsBar(page).boundingBox())!;
+    expect(after.height).toBe(before.height);
+    expect(after.y).toBe(before.y);
+
+    // 次へで正誤の文字が消える（12.6）
+    await nextButton(page).click();
+    await expect(heading).not.toHaveText(stem);
+    await expect(statsBar(page)).not.toContainText('正解');
+
+    // 不正解すると「× 不正解」が出る（12.2、12.5）
+    stem = (await heading.textContent())!;
+    await page.getByRole('button', { name: `${stem}の誤答`, exact: true }).click();
+    await waitSaved(page);
+    await expect(statsBar(page)).toContainText('× 不正解');
   });
 });
 
