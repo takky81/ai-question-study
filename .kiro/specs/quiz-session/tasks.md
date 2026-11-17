@@ -266,7 +266,7 @@
 
 - [ ] 12. 変更: 成績表示を正誤に合わせて色分けする（2026-11-17 の Requirement 12）
 
-- [ ] 12.1 成績表示に正誤の色と文字を付けられるようにする
+- [x] 12.1 成績表示に正誤の色と文字を付けられるようにする
   - `QuestionStatsBar` に `outcome: AnswerOutcome | null` を加え（型 `AnswerOutcome` を export）、常に `rounded border-2 px-2 py-1` の枠と幅を確保した正誤の文字の span を描き、`null` は透明の枠と `text-text-muted`、`'correct'` は `mark-correct border-correct` と「○ 正解」、`'incorrect'` は `mark-incorrect border-incorrect` と「× 不正解」にする
   - 完了: `QuestionStatsBar.test.tsx` で、3つの `outcome` それぞれの文字と class が確認でき、既存の成績の文字列のテストが通る
   - _Boundary: src/features/quiz/QuestionStatsBar.tsx_
