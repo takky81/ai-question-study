@@ -43,11 +43,11 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
     steps:
       # CI が検査したコミットそのものを取得する
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -62,12 +62,12 @@ jobs:
       - name: 成果物の検査
         run: node scripts/check-dist.mjs
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
       - name: GitHub Pages へ配信
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
