@@ -142,6 +142,7 @@ let flagsQuestion: string;
 let retrySubject: { id: string; name: string };
 let retryQuestion: string;
 let uiSubject: { id: string; name: string };
+let handSubject: { id: string; name: string };
 
 test.beforeAll(async ({}, testInfo) => {
   run = `${NAME_PREFIX}${testInfo.project.name}-${Date.now()}`;
@@ -181,6 +182,11 @@ test.beforeAll(async ({}, testInfo) => {
   uiSubject = await createSubject('表示');
   const uk = await createKeyword(uiSubject.id, '表示語');
   await createQuestion(uiSubject.id, '表示問', [uk]);
+
+  handSubject = await createSubject('配置');
+  const hk = await createKeyword(handSubject.id, '配置語');
+  await createQuestion(handSubject.id, '配置問1', [hk]);
+  await createQuestion(handSubject.id, '配置問2', [hk]);
 });
 
 test.afterAll(async () => {
@@ -642,6 +648,93 @@ test.describe('レスポンシブ・キーボード・テーマ・導線', () =>
     const box = await expectDocked();
     const comment = (await page.getByRole('textbox', { name: '疑義の内容（自由入力）' }).boundingBox())!;
     expect(comment.y + comment.height).toBeLessThan(box.y);
+  });
+
+  test('右手用・左手用の切り替え: 「？」の列と「次へ」が左に寄り、次の問題でも保たれ、再読み込みと再開始で右手用に戻る', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', '390×844 で確認する');
+    const toggle = page.getByRole('group', { name: '操作の配置', exact: true });
+    const right = toggle.getByRole('button', { name: '右手用', exact: true });
+    const left = toggle.getByRole('button', { name: '左手用', exact: true });
+    const heading = page.getByRole('heading', { name: /^配置問[12]$/ });
+    const currentStem = async () => (await heading.textContent())!;
+    const guessSide = async (stem: string) => {
+      const main = (await page.getByRole('button', { name: `${stem}の正解`, exact: true }).boundingBox())!;
+      const guess = (await page.getByRole('button', { name: `推測で解答: ${stem}の正解`, exact: true }).boundingBox())!;
+      return { main, guess };
+    };
+
+    // 開いた直後は右手用で、「？」は選択肢の右端（11.2、11.6）
+    await openPlay(page, handSubject.id);
+    await expect(heading).toBeVisible();
+    await expect(right).toHaveAttribute('aria-pressed', 'true');
+    await expect(left).toHaveAttribute('aria-pressed', 'false');
+    let stem = await currentStem();
+    let { main, guess } = await guessSide(stem);
+    expect(main.x + main.width).toBeLessThanOrEqual(guess.x);
+
+    // 左手用にすると「？」が選択領域の左に来る（11.3、11.4）
+    await left.click();
+    await expect(left).toHaveAttribute('aria-pressed', 'true');
+    await expect(right).toHaveAttribute('aria-pressed', 'false');
+    ({ main, guess } = await guessSide(stem));
+    expect(guess.x + guess.width).toBeLessThanOrEqual(main.x);
+
+    // 判定後の「次へ」は左下にあり、下部導線の上にある（11.4、5.11）
+    await page.getByRole('button', { name: `${stem}の誤答`, exact: true }).click();
+    await waitSaved(page);
+    const viewport = page.viewportSize()!;
+    const expectDockedLeft = async () => {
+      const box = (await nextButton(page).boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+      expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+      expect(box.x + box.width / 2).toBeLessThan(viewport.width / 2);
+      expect(box.y + box.height / 2).toBeGreaterThan(viewport.height / 2);
+      const bar = (await page.getByRole('navigation', { name: '学習ナビゲーション', exact: true }).boundingBox())!;
+      expect(box.y + box.height).toBeLessThan(bar.y);
+      return box;
+    };
+    await expectDockedLeft();
+
+    // 最下部までスクロールしても、自由入力欄が「次へ」の上端より上に来る（5.11）
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1,
+        ),
+      )
+      .toBe(true);
+    const box = await expectDockedLeft();
+    const comment = (await page.getByRole('textbox', { name: '疑義の内容（自由入力）' }).boundingBox())!;
+    expect(comment.y + comment.height).toBeLessThan(box.y);
+
+    // 次の問題でも左手用のまま（11.7）
+    await nextButton(page).click();
+    await expect(heading).not.toHaveText(stem);
+    await expect(left).toHaveAttribute('aria-pressed', 'true');
+    stem = await currentStem();
+    ({ main, guess } = await guessSide(stem));
+    expect(guess.x + guess.width).toBeLessThanOrEqual(main.x);
+
+    // 再読み込みすると右手用に戻る（11.9）
+    await page.reload();
+    await expect(heading).toBeVisible();
+    await expect(right).toHaveAttribute('aria-pressed', 'true');
+    await expect(left).toHaveAttribute('aria-pressed', 'false');
+
+    // 左手用にしてから終了し、出題をやり直すと右手用に戻る（11.9）
+    await left.click();
+    await expect(left).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: '終了', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/quiz\\?subject=${handSubject.id}`));
+    await startButton(page).click();
+    await expect(heading).toBeVisible();
+    await expect(right).toHaveAttribute('aria-pressed', 'true');
+    await expect(left).toHaveAttribute('aria-pressed', 'false');
   });
 });
 

@@ -236,7 +236,7 @@
   - _Boundary: supabase/migrations, e2e/quiz-db.spec.ts_
   - _Requirements: 4.4, 4.5, 7.7_
 
-- [ ] 11. 変更: 右手用・左手用の配置を切り替える（2026-11-17 の Requirement 11、4.3、5.10、5.11 の変更）
+- [x] 11. 変更: 右手用・左手用の配置を切り替える（2026-11-17 の Requirement 11、4.3、5.10、5.11 の変更）
 
 - [x] 11.1 (P) 配置の型と切り替えボタンを作る
   - `handedness.ts` に `Handedness`、`DEFAULT_HANDEDNESS`（右手用）、表示名を置き、`HandednessToggle` を「右手用」「左手用」の2ボタン（`aria-pressed`、44px 以上、`focus-ring`）で作る
@@ -257,7 +257,7 @@
   - _Boundary: src/features/quiz/QuizPlayPage.tsx_
   - _Requirements: 5.10, 5.11, 11.1, 11.2, 11.5, 11.6, 11.7, 11.9_
 
-- [ ] 11.4 配置の切り替えの E2E を追加する
+- [x] 11.4 配置の切り替えの E2E を追加する
   - `e2e/quiz.spec.ts` に、390×844 での初期の右手用、左手用への切り替え後の「？」と「次へ」の位置、下部導線と最後の内容との重なりなし、次の問題での維持、再読み込みと「終了」→再開始で右手用に戻ることを追加する
   - 完了: `npx playwright test e2e/quiz.spec.ts` がローカル Supabase で通る
   - _Depends: 11.3_
@@ -284,3 +284,4 @@
 - 4.3: 学習区分に「出題」が加わったため router.test.tsx の 5.6 の間接テストを書き換えた（5.6 は NavLinks.test.tsx と AppLayout.test.tsx で確認）。モバイル下部バーの「出題」は 5.2 の E2E で確認する。
 - 5.1: e2e/quiz-db.spec.ts の SQL 接続は docker exec psql（SUPABASE_DB_CONTAINER で変更可、CI では E2E を実行しない）。後片付けは子テーブルだけ session_replication_role=replica で消してから科目を削除する。seed の問題には解答を作らない。
 - 5.2: e2e/quiz.spec.ts の後片付けは共通接頭辞 quiz-ui-% で消す（workers: 1 前提）。並列実行にする場合は run 単位に絞ること。
+- 11.3: prettier を実行するとシングルクォートがダブルクォートに書き換わる（リポジトリの書式と合わない）。prettier --write は使わず、既存の書式のまま最小の差分で編集する。
