@@ -238,7 +238,7 @@
 
 - [ ] 11. 変更: 右手用・左手用の配置を切り替える（2026-11-17 の Requirement 11、4.3、5.10、5.11 の変更）
 
-- [ ] 11.1 (P) 配置の型と切り替えボタンを作る
+- [x] 11.1 (P) 配置の型と切り替えボタンを作る
   - `handedness.ts` に `Handedness`、`DEFAULT_HANDEDNESS`（右手用）、表示名を置き、`HandednessToggle` を「右手用」「左手用」の2ボタン（`aria-pressed`、44px 以上、`focus-ring`）で作る
   - 完了: `HandednessToggle.test.tsx` で、選択中のボタンが `aria-pressed="true"` になり、クリックと Enter／Space で `onChange` が呼ばれることが通る
   - _Boundary: src/features/quiz/handedness.ts, src/features/quiz/HandednessToggle.tsx_
