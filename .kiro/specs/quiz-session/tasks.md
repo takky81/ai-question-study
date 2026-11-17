@@ -236,6 +236,34 @@
   - _Boundary: supabase/migrations, e2e/quiz-db.spec.ts_
   - _Requirements: 4.4, 4.5, 7.7_
 
+- [ ] 11. 変更: 右手用・左手用の配置を切り替える（2026-11-17 の Requirement 11、4.3、5.10、5.11 の変更）
+
+- [ ] 11.1 (P) 配置の型と切り替えボタンを作る
+  - `handedness.ts` に `Handedness`、`DEFAULT_HANDEDNESS`（右手用）、表示名を置き、`HandednessToggle` を「右手用」「左手用」の2ボタン（`aria-pressed`、44px 以上、`focus-ring`）で作る
+  - 完了: `HandednessToggle.test.tsx` で、選択中のボタンが `aria-pressed="true"` になり、クリックと Enter／Space で `onChange` が呼ばれることが通る
+  - _Boundary: src/features/quiz/handedness.ts, src/features/quiz/HandednessToggle.tsx_
+  - _Requirements: 11.1, 11.8_
+
+- [ ] 11.2 (P) 選択肢一覧で「？」と ○× の列を左右どちらにも置けるようにする
+  - `ChoiceList` に `side` prop（省略時 `'right'`）を加え、左手用では DOM の順番を「列 → 選択領域」にし、境界線を `border-r` にする。「わからない」の行の判定後の ×も同じ側に置く
+  - 完了: `ChoiceList.test.tsx` で、`side='left'` のとき各行の最初の子が「？」（判定後は `mark-cell`）、`side='right'` のとき最後の子であることと、既存のテストが通る
+  - _Boundary: src/features/quiz/ChoiceList.tsx_
+  - _Requirements: 4.3, 11.3, 11.4_
+
+- [ ] 11.3 解答画面に配置の切り替えをつなぐ
+  - `QuizPlayPage` に `useState(DEFAULT_HANDEDNESS)` を持ち、見出し行に `HandednessToggle` を置き（解答中・判定後だけ）、`ChoiceList` の `side` と、`NEXT_DOCK` を置き換えた `nextDockClass(side)`（左右2つの完全な class 文字列）に渡す。保存はしない
+  - 完了: `QuizPlayPage.test.tsx` で、判定後に左手用へ切り替えても選択・正誤・フラグ入力・成績が変わらず「次へ」の親に `left-4` が付くこと、次の問題でも左手用のままであることが通り、typecheck・test・build が通る
+  - _Depends: 11.1, 11.2_
+  - _Boundary: src/features/quiz/QuizPlayPage.tsx_
+  - _Requirements: 5.10, 5.11, 11.1, 11.2, 11.5, 11.6, 11.7, 11.9_
+
+- [ ] 11.4 配置の切り替えの E2E を追加する
+  - `e2e/quiz.spec.ts` に、390×844 での初期の右手用、左手用への切り替え後の「？」と「次へ」の位置、下部導線と最後の内容との重なりなし、次の問題での維持、再読み込みと「終了」→再開始で右手用に戻ることを追加する
+  - 完了: `npx playwright test e2e/quiz.spec.ts` がローカル Supabase で通る
+  - _Depends: 11.3_
+  - _Boundary: e2e/quiz.spec.ts_
+  - _Requirements: 11.2, 11.3, 11.4, 11.6, 11.7, 11.9_
+
 ## Implementation Notes
 
 - 1.1: 3テーブルの FK は on delete restrict のため、解答・SRS・フラグを作る E2E は後片付けでそれらを先に消す必要がある（GUC `quiz.write_via_rpc` を立てる直接 SQL 接続、またはテスト専用の手段）。RPC は `set_config('quiz.write_via_rpc','on', true)`（トランザクション限定）を使い、入力検証なしにこの設定を立てる公開関数を作らない。

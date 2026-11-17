@@ -180,6 +180,12 @@ e2e/
 - 2026-11-07 の要件変更（5.10、5.11）で変更するファイル（DB・RPC・共通レイアウトの変更なし）:
   - `src/features/quiz/QuizPlayPage.tsx` — 判定後の「次へ」を画面右下に固定し、判定中は末尾にスペーサーを置く（5.10、5.11）
   - `src/features/quiz/QuizPlayPage.test.tsx`、`e2e/quiz.spec.ts` — テストの追加
+- 2026-11-17 の要件変更（4.3、5.10、5.11、Requirement 11）で変更するファイル（DB・RPC・共通レイアウトの変更なし）:
+  - `src/features/quiz/handedness.ts`（新規）— 型 `Handedness`、初期値 `DEFAULT_HANDEDNESS`、表示名
+  - `src/features/quiz/HandednessToggle.tsx`（新規）— 解答画面の見出し行に置く「右手用／左手用」の切り替え
+  - `src/features/quiz/ChoiceList.tsx` — prop `side` を受け取り、「？」エリアと `MarkCell` の列を左右どちらの端に置くかを切り替える
+  - `src/features/quiz/QuizPlayPage.tsx` — 配置の state を持ち、`ChoiceList` と「次へ」の固定位置に渡す
+  - `src/features/quiz/HandednessToggle.test.tsx`（新規）、`ChoiceList.test.tsx`、`QuizPlayPage.test.tsx`、`e2e/quiz.spec.ts` — テストの追加
 - `supabase/seed.sql` — E2E 用に、出題対象・無効・削除の問題と途中ノードへの紐づけを含む科目と、1,050 問・1,200 キーワードの大量データ用科目を追加する（ローカル専用）
 
 ## System Flows
@@ -315,6 +321,15 @@ sequenceDiagram
 | 10.4 | 両テーマのコントラスト | ChoiceList | テーマトークン | — |
 | 10.5 | 取得失敗と再試行 | QuizStartPage、QuizPlayPage、api.ts | `toQuizErrorMessage` | — |
 | 10.6 | 終了で範囲選択へ | QuizPlayPage、range.ts | `toRangeParams` | — |
+| 11.1 | 解答画面に配置の切り替えを表示 | HandednessToggle、QuizPlayPage | `HandednessToggle` の props | — |
+| 11.2 | 解答画面を開いたときは右手用 | QuizPlayPage | `useState(DEFAULT_HANDEDNESS)` | — |
+| 11.3 | 右手用: 「？」・○×は右端、次へは右下 | ChoiceList、QuizPlayPage | `side = 'right'`、`nextDockClass('right')` | — |
+| 11.4 | 左手用: 「？」・○×は左端、次へは左下 | ChoiceList、QuizPlayPage | `side = 'left'`、`nextDockClass('left')` | — |
+| 11.5 | 切り替えを即時反映し、解答状態・フラグ・成績を変えない | QuizPlayPage | 配置は `sessionReducer` の外の独立した state | — |
+| 11.6 | 次の問題以降にも適用 | QuizPlayPage | state はページ単位で、問題の切り替えで初期化しない | — |
+| 11.7 | 終了後・再読み込み後は保持しない | QuizPlayPage | 永続化しない（URL・ストレージ・DB に書かない） | — |
+| 11.8 | 切り替えは 44px 以上、キーボード操作可、現在の配置がわかる | HandednessToggle | `tap-target`、`focus-ring`、`aria-pressed` | — |
+| 11.9 | 左下でも内容と下部導線を隠さない | QuizPlayPage | 既存のスペーサーと同じ `bottom` のオフセット | — |
 
 ## Components and Interfaces
 
@@ -614,6 +629,20 @@ export function choiceDisplayState(
 - 判定後は各選択肢の枠内に選択肢の解説を表示する（5.5）。判定前は解説・印を描画しない（5.7）。判定後はボタンを `disabled` にする（5.8）。
 - 選択（太枠）と正誤（色＋記号）を別の形状で示し、ライト／ダークの判別は app-foundation のトークンに従う（10.4）。
 
+#### 配置の切り替え（Requirement 11、2026-11-17）
+
+- `handedness.ts`:
+  ```ts
+  export type Handedness = 'right' | 'left';
+  export const DEFAULT_HANDEDNESS: Handedness = 'right';
+  export const HANDEDNESS_LABELS: Record<Handedness, string> = { right: '右手用', left: '左手用' };
+  ```
+- `HandednessToggle`（`{ value: Handedness; onChange: (next: Handedness) => void }`）: `role="group"`・`aria-label="操作の配置"` の中に「右手用」「左手用」の2つのボタンを並べ、選択中のボタンに `aria-pressed="true"` と `choice-selected` 相当の見た目を付ける（11.1、11.8）。各ボタンは既存の `BUTTON`（`tap-target`、`focus-ring`）で 44px 以上。テキストで現在の配置がわかるため、色だけに頼らない。
+- 置き場所: `QuizPlayPage` の見出し行（「出題」と「終了」の間、`flex-wrap` で 390px 幅でも横スクロールしない）。`phase` が `answering` または `judged` の間だけ表示する（10.2）。
+- 状態: `QuizPlayPage` が `useState<Handedness>(DEFAULT_HANDEDNESS)` で持つ。`sessionReducer` には入れない（解答・成績・フラグの状態と独立させ、切り替えでそれらを変えない。11.5）。問題を進めてもページはアンマウントされないため次の問題に引き継ぐ（11.6）。永続化はしない。「終了」で範囲選択に戻るとアンマウントされ、再読み込みでも初期値に戻る（11.2、11.7）。
+- 「次へ」の位置: 定数 `NEXT_DOCK` を `nextDockClass(side)` に置き換える。`bottom` のオフセット、`z-10`、スペーサーは共通のまま、横方向だけを `right-4 lg:right-6`（右手用）／`left-4 lg:left-6`（左手用）にする（5.10、5.11、11.3、11.4、11.9）。Tailwind がクラスを検出できるよう、2つの完全な文字列を定数で持つ（動的な文字列連結はしない）。
+- `ChoiceList` の `side` prop（省略時 `'right'`）: 列（`COLUMN`）の境界線を `side = 'right'` なら `border-l`、`'left'` なら `border-r` にする。行の DOM 上の順番も見た目と同じにする（左手用は列 → 選択領域）。`flex-row-reverse` は使わない（見た目と Tab 順がずれるため。10.3）。本文は常に左揃えのまま。「わからない」の行の判定後の `MarkCell` も同じ側に置く（4.7、5.9）。
+
 #### QuestionStatsBar / AnswerFeedback / SessionSummary
 
 - `QuestionStatsBar`: 「正答 3 / 出題 5（60%）」の形式。出題数 0 は「未出題」。判定後は `session.stats` の更新値を表示する（6.1〜6.3）。
@@ -740,6 +769,8 @@ erDiagram
 - `QuizPlayPage.test.tsx`（追加分）: 保存中に「次へ」を押すと完了後に遷移する、保存失敗中は遷移しない（7.6）。判定前は「次へ」とスペーサーがない、判定後は `fixed` の class とスペーサーが付き、「次へ」が DOM 上で `FlagForm` の後にある（5.10、5.11、10.3）
 - `QuestionStatsBar.test.tsx`: 未出題の表示と判定後の更新（6.1〜6.3）
 
+- 配置の切り替え（Requirement 11）: `HandednessToggle.test.tsx` — 初期は「右手用」が `aria-pressed="true"`、「左手用」のクリックと Enter／Space で `onChange('left')`（11.1、11.8）。`ChoiceList.test.tsx` — `side='left'` で各行の最初の子が「？」ボタン（判定後は `mark-cell`）で `border-r` を持ち、`side='right'` で最後の子になる（11.3、11.4）。`QuizPlayPage.test.tsx` — 判定後に「左手用」に切り替えても選択・正誤・フラグの入力・成績が変わらず、「次へ」の親に `left-4` が付く。次の問題に進んでも左手用のまま（11.5、11.6）。
+
 ### E2E Tests（Playwright、ローカル Supabase、直列）
 
 - `quiz.spec.ts`:
@@ -764,6 +795,8 @@ erDiagram
   - `question_stats` の各列と、`keyword_stats` で途中ノードが配下の問題を含む、同じ部分木の2キーワードに紐づく問題を1回だけ数える、出題数 0 で `correct_rate` が null（2.6、2.7、9.1〜9.3、9.5）
   - 1,050 問・1,200 キーワードの seed で `list_quiz_candidates`、`question_stats`、`keyword_stats` を `fetchAllPages` で全件取得して欠落・重複がない（9.7）
   - クライアントから `rpc('resolve_question_flags')` と `schema('quiz_private').rpc('resolve_question_flags')` が失敗する。テスト用の SQL 接続（`set role authenticated` と JWT クレームの設定）で、例外で終わるトランザクション内の呼び出しがロールバックされ、成功時は `open` だけが `resolved` になって `resolved_at` が記録され、解消済みの行が残り、変更できない（8.1〜8.5）
+
+- 配置の切り替え（Requirement 11）は `e2e/quiz.spec.ts` に追加する: 390×844 で、解答画面を開くと「右手用」が選択中で「？」エリアが選択肢の右端にある。「左手用」に切り替えると「？」エリアの `boundingBox` が選択領域より左にあり、判定後の「次へ」がビューポート内の左下にあり、下端が下部導線の上端より上、最下部までスクロールしても最後の内容の下端が「次へ」の上端より上にある。次の問題でも左手用のまま。再読み込みと「終了」→再開始で右手用に戻る（11.2〜11.4、11.6、11.7、11.9）。
 
 ## Security Considerations
 
